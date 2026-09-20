@@ -144,7 +144,7 @@
     </dependencies>
 
     <build>
-        <finalName>library-ssm</finalName>
+        <finalName>library</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

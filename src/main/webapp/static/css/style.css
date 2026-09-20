@@ -1,4 +1,4 @@
-/* =====================================================================
+﻿/* =====================================================================
    校园图书借阅管理系统 - 全站样式（蓝白学术风）
    ===================================================================== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -246,3 +246,68 @@ ul, ol { list-style: none; }
     .dash-grid { grid-template-columns: 1fr; }
     .detail-wrap { flex-direction: column; }
 }
+
+/* ==================== 弹窗组件 ==================== */
+.modal-mask {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, .45); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    animation: modalFadeIn .18s ease;
+}
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-box {
+    background: #fff; border-radius: 10px; min-width: 320px; max-width: 440px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .18); overflow: hidden;
+    animation: modalPopIn .2s ease;
+}
+@keyframes modalPopIn { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modal-head {
+    padding: 18px 22px 10px; font-size: 16px; font-weight: bold; color: #1f4e8c;
+    display: flex; align-items: center; gap: 10px;
+}
+.modal-head .modal-icon { font-size: 20px; }
+.modal-head .modal-icon.ok { color: #2e8b57; }
+.modal-head .modal-icon.err { color: #d9534f; }
+.modal-head .modal-icon.warn { color: #e67e22; }
+.modal-head .modal-icon.info { color: #1f4e8c; }
+
+.modal-body { padding: 4px 22px 18px; color: #4a5a6d; font-size: 14px; line-height: 1.7; }
+.modal-body input {
+    width: 100%; padding: 9px 12px; border: 1px solid #d5dce6; border-radius: 6px;
+    font-size: 14px; outline: none; margin-top: 6px; box-sizing: border-box;
+}
+.modal-body input:focus { border-color: #1f4e8c; box-shadow: 0 0 0 2px rgba(31, 78, 140, .12); }
+
+.modal-foot {
+    padding: 12px 22px; border-top: 1px solid #f0f4f9;
+    display: flex; justify-content: flex-end; gap: 10px;
+}
+.modal-foot .btn {
+    padding: 7px 20px; border-radius: 6px; font-size: 13px; cursor: pointer; border: none;
+}
+.modal-foot .btn-cancel { background: #f0f4f9; color: #4a5a6d; }
+.modal-foot .btn-cancel:hover { background: #e3ecf9; }
+.modal-foot .btn-confirm { background: #1f4e8c; color: #fff; }
+.modal-foot .btn-confirm:hover { background: #153a6b; }
+
+/* Toast 轻提示（右上角滑出，自动消失） */
+.toast-wrap {
+    position: fixed; top: 24px; right: 24px; z-index: 10000;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.toast-item {
+    padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, .15);
+    font-size: 13px; color: #fff; min-width: 200px; max-width: 320px;
+    display: flex; align-items: center; gap: 10px; pointer-events: auto;
+    animation: toastIn .25s ease;
+}
+.toast-item.ok { background: #2e8b57; }
+.toast-item.err { background: #d9534f; }
+.toast-item.warn { background: #e67e22; }
+.toast-item.info { background: #1f4e8c; }
+.toast-item .ti-icon { font-size: 16px; }
+.toast-item.fade-out { animation: toastOut .3s ease forwards; }
+@keyframes toastIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(30px); opacity: 0; } }
