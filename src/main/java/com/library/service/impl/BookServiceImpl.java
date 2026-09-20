@@ -9,6 +9,7 @@ import com.library.service.CacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,9 @@ public class BookServiceImpl implements BookService {
 
     @Autowired
     private CacheService cacheService;
+
+    @Value("${upload.path:}")
+    private String uploadPath;
 
     @Override
     public Map<String, Object> page(String keyword, Long categoryId, String publisher, String author,
@@ -162,11 +166,16 @@ public class BookServiceImpl implements BookService {
         if (!ALLOWED_SUFFIX.contains(suffix)) {
             throw new IllegalArgumentException("仅支持 jpg/jpeg/png/gif 格式图片");
         }
-        // 存储到应用发布目录 /uploads 下，UUID 重命名防止重名覆盖
-        String dirPath = request.getServletContext().getRealPath("/uploads");
+        // 存储目录：优先使用配置的绝对路径，否则使用应用发布目录下的 /uploads
+        String dirPath;
+        if (uploadPath != null && !uploadPath.trim().isEmpty()) {
+            dirPath = uploadPath.trim();
+        } else {
+            dirPath = request.getServletContext().getRealPath("/uploads");
+        }
         File dir = new File(dirPath);
         if (!dir.exists() && !dir.mkdirs()) {
-            throw new IllegalStateException("上传目录创建失败");
+            throw new IllegalStateException("上传目录创建失败：" + dirPath);
         }
         String fileName = UUID.randomUUID().toString().replace("-", "") + "." + suffix;
         try {

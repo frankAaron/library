@@ -56,9 +56,28 @@ public class PermissionService {
             User user = userMapper.selectById(userId);
             if (user != null) {
                 user.setPassword(null);
+                fillDefaults(user);
             }
             return user;
         });
+    }
+
+    private void fillDefaults(User user) {
+        if (user.getDeposit() == null) {
+            user.setDeposit(BigDecimal.ZERO);
+        }
+        if (user.getFinePerDay() == null) {
+            user.setFinePerDay(new BigDecimal("0.5"));
+        }
+        if (user.getMaxBorrowCount() == null) {
+            user.setMaxBorrowCount(5);
+        }
+        if (user.getMaxBorrowDays() == null) {
+            user.setMaxBorrowDays(30);
+        }
+        if (user.getMaxRenewCount() == null) {
+            user.setMaxRenewCount(2);
+        }
     }
 
     /** 用户权限/押金变更后主动失效缓存 */

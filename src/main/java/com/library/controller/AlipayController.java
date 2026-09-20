@@ -3,12 +3,11 @@ package com.library.controller;
 import com.library.common.AlipayConfig;
 import com.library.common.AlipayService;
 import com.library.common.Result;
-import com.library.controller.UserController;
 import com.library.entity.User;
 import com.library.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,11 +33,16 @@ public class AlipayController {
     @Autowired
     private AccountService accountService;
 
+    @Autowired
+    private AlipayService alipayService;
+
+    @Autowired
+    private AlipayConfig alipayConfig;
+
     /**
      * 通用下单入口：前端传入 type + 业务参数
      * type = fine   → 罚款缴纳，需要 fineId
      * type = deposit → 押金充值，需要 amount
-     * 返回支付宝支付页面 HTML（前端 document.write 即可跳转）
      */
     @PostMapping("/create")
     public Result create(@RequestBody Map<String, Object> param,
@@ -87,21 +91,27 @@ public class AlipayController {
         log.info("[支付宝] 创建订单: type={}, outTradeNo={}, amount={}, userId={}",
                 type, outTradeNo, amount, user.getId());
 
-        String payHtml = AlipayService.tradePagePay(outTradeNo, amount, subject, body);
+        String payHtml = alipayService.tradePagePay(outTradeNo, amount, subject, body);
         Map<String, Object> data = new HashMap<>();
         data.put("payHtml", payHtml);
         data.put("outTradeNo", outTradeNo);
         data.put("amount", amount);
-        data.put("mockMode", !AlipayConfig.isRealMode());
+        data.put("mockMode", !alipayConfig.isRealMode());
         return Result.ok(data);
     }
 
     /**
      * 同步回调 —— 用户付完款跳回这里
-     * 真正的生产环境应该校验签名 + 查单确认，本地教学环境简化处理
+     * 注意：生产环境必须校验签名后再处理
      */
     @GetMapping("/return")
     public void returnUrl(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+        Map<String, String> params = new HashMap<>();
+        for (Map.Entry<String, String[]> e : req.getParameterMap().entrySet()) {
+            params.put(e.getKey(), e.getValue() != null && e.getValue().length > 0
+                    ? e.getValue()[0] : "");
+        }
+
         String outTradeNo = req.getParameter("out_trade_no");
         String totalAmount = req.getParameter("total_amount");
         String tradeStatus = req.getParameter("trade_status");
@@ -113,7 +123,12 @@ public class AlipayController {
         String msg;
         boolean success = false;
         try {
-            if (outTradeNo != null && outTradeNo.startsWith("FINE_")) {
+            if (!alipayService.verifySign(params)) {
+                log.error("[支付宝] 同步回调签名校验失败，拒绝处理！outTradeNo={}", outTradeNo);
+                msg = "签名校验失败，支付结果不可信";
+            } else if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
+                msg = "交易状态非成功: " + tradeStatus;
+            } else if (outTradeNo != null && outTradeNo.startsWith("FINE_")) {
                 String[] parts = outTradeNo.split("_");
                 Long userId = Long.valueOf(parts[1]);
                 Long fineId = Long.valueOf(parts[2]);
@@ -135,11 +150,69 @@ public class AlipayController {
             msg = "支付回调处理失败: " + e.getMessage();
         }
 
-        String redirect = AlipayConfig.DOMAIN + "/alipay/result?success=" + success
+        String redirect = alipayConfig.getDomain() + "/alipay/result?success=" + success
                 + "&msg=" + URLEncoder.encode(msg, StandardCharsets.UTF_8)
                 + "&outTradeNo=" + (outTradeNo == null ? "" : URLEncoder.encode(outTradeNo, StandardCharsets.UTF_8))
                 + "&amount=" + (totalAmount == null ? "" : URLEncoder.encode(totalAmount, StandardCharsets.UTF_8));
         resp.sendRedirect(redirect);
+    }
+
+    /**
+     * 异步回调 —— 支付宝主动推送（生产环境主要依赖此回调确认支付结果）
+     * 支付宝会在支付成功后向此 URL 发送 POST 请求，若返回内容不是 "success" 则会每隔一段时间重试（共 8 次）
+     */
+    @PostMapping("/notify")
+    public void notifyUrl(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+        Map<String, String> params = new HashMap<>();
+        for (Map.Entry<String, String[]> e : req.getParameterMap().entrySet()) {
+            params.put(e.getKey(), e.getValue() != null && e.getValue().length > 0
+                    ? e.getValue()[0] : "");
+        }
+
+        String outTradeNo = params.get("out_trade_no");
+        String totalAmount = params.get("total_amount");
+        String tradeStatus = params.get("trade_status");
+        String tradeNo = params.get("trade_no");
+        String buyerId = params.get("buyer_id");
+
+        log.info("[支付宝] 异步回调: outTradeNo={}, totalAmount={}, tradeStatus={}, tradeNo={}, buyerId={}",
+                outTradeNo, totalAmount, tradeStatus, tradeNo, buyerId);
+
+        String responseContent = "fail";
+        try {
+            if (!alipayService.verifySign(params)) {
+                log.error("[支付宝] 异步回调签名校验失败！outTradeNo={}", outTradeNo);
+            } else if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
+                log.info("[支付宝] 非交易成功状态，忽略: {}", tradeStatus);
+                responseContent = "success";
+            } else if (outTradeNo != null && outTradeNo.startsWith("FINE_")) {
+                String[] parts = outTradeNo.split("_");
+                Long userId = Long.valueOf(parts[1]);
+                Long fineId = Long.valueOf(parts[2]);
+                Result r = accountService.confirmFinePaid(userId, fineId, outTradeNo, tradeNo);
+                if (r.isSuccess()) {
+                    responseContent = "success";
+                }
+            } else if (outTradeNo != null && outTradeNo.startsWith("DEP_")) {
+                String[] parts = outTradeNo.split("_");
+                Long userId = Long.valueOf(parts[1]);
+                BigDecimal amt = new BigDecimal(totalAmount);
+                Result r = accountService.confirmDepositPaid(userId, amt, outTradeNo, tradeNo);
+                if (r.isSuccess()) {
+                    responseContent = "success";
+                }
+            } else {
+                log.warn("[支付宝] 未知订单类型: {}", outTradeNo);
+            }
+        } catch (Exception e) {
+            log.error("[支付宝] 异步回调处理异常", e);
+        }
+
+        resp.setContentType("text/plain;charset=UTF-8");
+        PrintWriter pw = resp.getWriter();
+        pw.write(responseContent);
+        pw.flush();
+        pw.close();
     }
 
     /**
@@ -187,8 +260,8 @@ public class AlipayController {
                 outTradeNo == null ? "-" : outTradeNo,
                 amount == null ? "-" : amount,
                 msg == null ? (ok ? "交易已完成" : "交易未成功") : msg,
-                AlipayConfig.DOMAIN + "/borrow/toMyBorrow",
-                AlipayConfig.isRealMode() ? "支付宝真实沙箱模式" : "Mock 模拟支付模式"
+                alipayConfig.getDomain() + "/borrow/toMyBorrow",
+                alipayConfig.isRealMode() ? "支付宝真实沙箱模式" : "Mock 模拟支付模式"
         );
         resp.setContentType("text/html;charset=UTF-8");
         PrintWriter pw = resp.getWriter();

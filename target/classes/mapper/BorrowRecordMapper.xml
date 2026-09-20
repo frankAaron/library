@@ -46,6 +46,12 @@
         SELECT COUNT(*) FROM t_borrow_record WHERE user_id = #{userId}
     </select>
 
+    <select id="countRecent" resultType="long">
+        SELECT COUNT(*) FROM t_borrow_record
+        WHERE user_id = #{userId}
+          AND borrow_date &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+    </select>
+
     <!-- 管理端借阅记录分页查询 -->
     <sql id="adminWhere">
         <where>

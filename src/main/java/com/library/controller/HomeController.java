@@ -31,8 +31,10 @@ import java.util.List;
 @Controller
 public class HomeController {
 
-    /** 活跃读者累计借阅次数门槛 */
-    private static final long ACTIVE_READER_THRESHOLD = 5;
+    /** 活跃读者：最近 30 天借阅次数门槛 */
+    private static final long ACTIVE_READER_THRESHOLD = 3;
+    /** 活跃读者判定时间窗口 */
+    private static final int ACTIVE_READER_WINDOW_DAYS = 30;
     /** 首页新书数量 */
     private static final int NEW_BOOK_SIZE = 8;
 
@@ -82,7 +84,7 @@ public class HomeController {
             model.addAttribute("recoList", recommendService.recommend(sessionUser));
             model.addAttribute("activeReader",
                     sessionUser.getRole() != null && sessionUser.getRole() > 0
-                            && borrowRecordMapper.countTotal(sessionUser.getId()) >= ACTIVE_READER_THRESHOLD);
+                            && borrowRecordMapper.countRecent(sessionUser.getId(), ACTIVE_READER_WINDOW_DAYS) >= ACTIVE_READER_THRESHOLD);
         }
         return "index";
     }

@@ -1,58 +1,62 @@
 package com.library.common;
 
+import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
+import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
+@Service
 public class AlipayService {
 
     private static final Logger log = LoggerFactory.getLogger(AlipayService.class);
 
-    private static AlipayClient client;
+    @Autowired
+    private AlipayConfig config;
 
-    private static AlipayClient getClient() {
+    private volatile AlipayClient client;
+
+    private AlipayClient getClient() {
         if (client == null) {
-            client = new DefaultAlipayClient(
-                    AlipayConfig.GATEWAY,
-                    AlipayConfig.APP_ID,
-                    AlipayConfig.PRIVATE_KEY,
-                    AlipayConfig.FORMAT,
-                    AlipayConfig.CHARSET,
-                    AlipayConfig.ALIPAY_PUBLIC_KEY,
-                    AlipayConfig.SIGN_TYPE
-            );
+            synchronized (this) {
+                if (client == null) {
+                    client = new DefaultAlipayClient(
+                            config.getGateway(),
+                            config.getAppId(),
+                            config.getPrivateKey(),
+                            config.getFormat(),
+                            config.getCharset(),
+                            config.getAlipayPublicKey(),
+                            config.getSignType()
+                    );
+                }
+            }
         }
         return client;
     }
 
-    /**
-     * 生成电脑网站支付页面（form + auto submit）
-     *
-     * @param outTradeNo 商户订单号（唯一）
-     * @param totalAmount 金额（元）
-     * @param subject 订单标题
-     * @param body 订单描述
-     * @return HTML 表单（含自动提交），前端直接写入即可跳转支付宝
-     */
-    public static String tradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
-        if (AlipayConfig.isRealMode()) {
+    public String tradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
+        if (config.isRealMode()) {
             return realTradePagePay(outTradeNo, totalAmount, subject, body);
         }
         return mockTradePagePay(outTradeNo, totalAmount, subject, body);
     }
 
-    private static String realTradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
+    private String realTradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
         try {
             AlipayTradePagePayRequest req = new AlipayTradePagePayRequest();
-            req.setReturnUrl(AlipayConfig.RETURN_URL);
-            req.setNotifyUrl(AlipayConfig.NOTIFY_URL);
+            req.setReturnUrl(config.getReturnUrl());
+            req.setNotifyUrl(config.getNotifyUrl());
 
             Map<String, String> bizContent = new HashMap<>();
             bizContent.put("out_trade_no", outTradeNo);
@@ -78,9 +82,9 @@ public class AlipayService {
         }
     }
 
-    private static String mockTradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
+    private String mockTradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
         log.info("[支付宝] Mock 模式生成模拟支付页: outTradeNo={}, total={}", outTradeNo, totalAmount);
-        String returnUrl = AlipayConfig.RETURN_URL + "?out_trade_no=" + outTradeNo
+        String returnUrl = config.getReturnUrl() + "?out_trade_no=" + outTradeNo
                 + "&total_amount=" + totalAmount + "&trade_status=TRADE_SUCCESS";
         return """
 <!DOCTYPE html><html><head><meta charset="UTF-8"><title>模拟支付宝收银台</title>
@@ -118,5 +122,27 @@ public class AlipayService {
   function cancel(){ window.close(); history.back(); }
 </script></body></html>
                 """.formatted(totalAmount, subject, outTradeNo, body, returnUrl);
+    }
+
+    public boolean verifySign(Map<String, String> params) {
+        if (!config.isRealMode()) {
+            log.warn("[支付宝] Mock 模式跳过签名校验，生产环境必须验证！");
+            return true;
+        }
+        if (params == null || params.isEmpty()) {
+            return false;
+        }
+        TreeMap<String, String> sorted = new TreeMap<>(params);
+        try {
+            boolean ok = AlipaySignature.rsaCheckV1(sorted, config.getAlipayPublicKey(),
+                    config.getCharset(), config.getSignType());
+            if (!ok) {
+                log.warn("[支付宝] 签名校验失败");
+            }
+            return ok;
+        } catch (AlipayApiException e) {
+            log.error("[支付宝] 签名校验异常", e);
+            return false;
+        }
     }
 }

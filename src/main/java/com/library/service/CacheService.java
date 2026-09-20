@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.params.SetParams;
 
 import java.util.Map;
 import java.util.Set;
@@ -64,6 +65,36 @@ public class CacheService {
             jedis.del(key);
         } catch (Exception e) {
             log.warn("Redis evict 降级, key={}, 原因: {}", key, e.getMessage(), e);
+        }
+    }
+
+    /** 递增整数计数器，返回递增后的值；key 不存在时会自动创建并返回 1 */
+    public long incr(String key) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            return jedis.incr(key);
+        } catch (Exception e) {
+            log.warn("Redis incr 降级, key={}, 原因: {}", key, e.getMessage());
+            return 0;
+        }
+    }
+
+    /** 设置过期时间（秒） */
+    public void expire(String key, int ttlSeconds) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.expire(key, ttlSeconds);
+        } catch (Exception e) {
+            log.warn("Redis expire 降级, key={}, 原因: {}", key, e.getMessage());
+        }
+    }
+
+    /** 带过期时间的 setnx（同 tryLock 语义，但返回 boolean 更通用） */
+    public boolean setnx(String key, String value, int ttlSeconds) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            String result = jedis.set(key, value, SetParams.setParams().nx().ex(ttlSeconds));
+            return "OK".equals(result);
+        } catch (Exception e) {
+            log.warn("Redis setnx 降级, key={}, 原因: {}", key, e.getMessage());
+            return true;
         }
     }
 
@@ -126,6 +157,36 @@ public class CacheService {
             }
         } catch (Exception e) {
             log.warn("Redis zadd 降级, key={}, 原因: {}", key, e.getMessage());
+        }
+    }
+
+    /**
+     * 分布式锁：尝试获取锁（SETNX + 过期时间）
+     *
+     * @param key          锁键
+     * @param token        持锁者唯一标识（通常用 UUID），释放锁时校验防止误删
+     * @param expireSeconds 锁过期时间（秒），防止宕机后死锁
+     * @return true 表示获取成功
+     */
+    public boolean tryLock(String key, String token, long expireSeconds) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            String result = jedis.set(key, token, SetParams.setParams().nx().ex((int) expireSeconds));
+            return "OK".equals(result);
+        } catch (Exception e) {
+            log.warn("Redis tryLock 降级, key={}, 原因: {}", key, e.getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * 分布式锁：释放锁（Lua 脚本保证原子性，仅持有者可释放）
+     */
+    public void releaseLock(String key, String token) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            String script = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            jedis.eval(script, 1, key, token);
+        } catch (Exception e) {
+            log.warn("Redis releaseLock 降级, key={}, 原因: {}", key, e.getMessage());
         }
     }
 }

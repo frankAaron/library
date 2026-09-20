@@ -14,7 +14,11 @@
     <context:component-scan base-package="com.library.controller,com.library.interceptor,com.library.exception"/>
 
     <!-- ==================== 注解驱动（JSON 转换器自动注册 Jackson） ==================== -->
-    <mvc:annotation-driven/>
+    <mvc:annotation-driven>
+        <mvc:argument-resolvers>
+            <bean class="com.library.support.CurrentUserArgumentResolver"/>
+        </mvc:argument-resolvers>
+    </mvc:annotation-driven>
 
     <!-- ==================== 三级权限拦截器 ==================== -->
     <mvc:interceptors>
@@ -31,6 +35,13 @@
             <!-- 图书浏览对未登录用户开放，借阅/预订动作在业务层校验登录 -->
             <mvc:exclude-mapping path="/book/toBooks"/>
             <mvc:exclude-mapping path="/book/detail/*"/>
+            <!-- 公共下拉/推荐接口（未登录回退热门榜单） -->
+            <mvc:exclude-mapping path="/category/list"/>
+            <mvc:exclude-mapping path="/reco/list"/>
+            <!-- 支付宝回调：同步/异步/结果页（都无用户 Session） -->
+            <mvc:exclude-mapping path="/alipay/return"/>
+            <mvc:exclude-mapping path="/alipay/notify"/>
+            <mvc:exclude-mapping path="/alipay/result"/>
             <mvc:exclude-mapping path="/static/**"/>
             <mvc:exclude-mapping path="/uploads/**"/>
             <mvc:exclude-mapping path="/favicon.ico"/>

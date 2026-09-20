@@ -4,6 +4,7 @@ import com.library.common.Constants;
 import com.library.common.Result;
 import com.library.dao.UserMapper;
 import com.library.entity.User;
+import com.library.service.CacheService;
 import com.library.service.PermissionService;
 import com.library.service.UserService;
 import com.library.util.MD5Util;
@@ -25,11 +26,23 @@ import java.util.Map;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final String LOCK_PREFIX = "library:login:lock:";
+    private static final String FAIL_PREFIX = "library:login:fail:";
+    /** 锁定阈值：连续失败 5 次即锁定 */
+    private static final int LOCK_THRESHOLD = 5;
+    /** 锁定时长：10 分钟 */
+    private static final int LOCK_TTL_SECONDS = 600;
+    /** 失败计数窗口：30 分钟 */
+    private static final int FAIL_WINDOW_SECONDS = 1800;
+
     @Autowired
     private UserMapper userMapper;
 
     @Autowired
     private PermissionService permissionService;
+
+    @Autowired
+    private CacheService cacheService;
 
     @Override
     @Transactional
@@ -91,14 +104,35 @@ public class UserServiceImpl implements UserService {
         if (isBlank(username) || isBlank(password)) {
             return Result.fail("请输入账号和密码");
         }
-        User user = userMapper.selectByUsername(username.trim());
-        // 账号不存在或密码错误统一提示，防止账号枚举
-        if (user == null || !MD5Util.matches(password, user.getPassword())) {
-            return Result.fail("账号或密码错误");
+        String trimmed = username.trim();
+        // 1. 检查账号锁定状态
+        String lockKey = LOCK_PREFIX + trimmed;
+        if (cacheService.get(lockKey) != null) {
+            return Result.fail("该账号登录失败次数过多，请 10 分钟后再试");
         }
+        // 2. 账号/密码校验（统一提示防账号枚举）
+        User user = userMapper.selectByUsername(trimmed);
+        if (user == null || !MD5Util.matches(password, user.getPassword())) {
+            // 失败计数 +1，达阈值则锁定
+            String failKey = FAIL_PREFIX + trimmed;
+            long failCount = cacheService.incr(failKey);
+            if (failCount == 1) {
+                cacheService.expire(failKey, FAIL_WINDOW_SECONDS);
+            }
+            if (failCount >= LOCK_THRESHOLD) {
+                cacheService.setnx(lockKey, "1", LOCK_TTL_SECONDS);
+                cacheService.evict(failKey);
+                return Result.fail("登录失败次数过多，账号已被锁定 10 分钟");
+            }
+            return Result.fail("账号或密码错误，您还有 " + (LOCK_THRESHOLD - failCount) + " 次尝试机会");
+        }
+        // 3. 账号状态检查
         if (user.getStatus() != null && user.getStatus() != 0) {
             return Result.fail("账号已被停用，请联系管理员");
         }
+        // 4. 登录成功：清除失败计数与锁定
+        cacheService.evict(lockKey);
+        cacheService.evict(FAIL_PREFIX + trimmed);
         user.setPassword(null);
         return Result.ok("登录成功", user);
     }

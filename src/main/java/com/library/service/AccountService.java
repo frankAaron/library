@@ -92,8 +92,11 @@ public class AccountService {
                     fine.getAmount().stripTrailingZeros().toPlainString(),
                     balance.stripTrailingZeros().toPlainString()));
         }
-        // 1. 押金扣款
-        userMapper.updateDeposit(sessionUser.getId(), fine.getAmount().negate());
+        // 1. 押金扣款（SQL 层原子性校验防并发余额负数）
+        int rows = userMapper.updateDeposit(sessionUser.getId(), fine.getAmount().negate());
+        if (rows == 0) {
+            return Result.fail("押金余额不足，请先充值押金");
+        }
         // 2. 罚款核销（仅未缴状态生效，防止并发重复缴费）
         if (fineRecordMapper.pay(fineId, sessionUser.getId()) == 0) {
             throw new IllegalStateException("罚款状态已变更，请刷新后重试");
@@ -103,7 +106,8 @@ public class AccountService {
         record.setUserId(sessionUser.getId());
         record.setAmount(fine.getAmount());
         record.setType(Constants.DEPOSIT_DEDUCT);
-        record.setRemark("超期罚款扣款：" + (fine.getBookName() == null ? "图书借阅" : "《" + fine.getBookName() + "》"));
+        String remarkText = "超期罚款扣款：" + (fine.getBookName() == null ? "图书借阅" : "《" + fine.getBookName() + "》");
+        record.setRemark(remarkText.length() > 180 ? remarkText.substring(0, 180) : remarkText);
         depositRecordMapper.insert(record);
         // 4. 失效用户缓存（缴清罚款后借阅限制自动解除）
         permissionService.evictUserCache(sessionUser.getId());
@@ -179,8 +183,9 @@ public class AccountService {
         record.setUserId(userId);
         record.setAmount(fine.getAmount());
         record.setType(Constants.DEPOSIT_DEDUCT);
-        record.setRemark("支付宝缴纳罚款：订单号" + outTradeNo
-                + "（图书：" + (fine.getBookName() == null ? "未知" : "《" + fine.getBookName() + "》") + "）");
+        String remarkText = "支付宝缴纳罚款：订单号" + outTradeNo
+                + "（图书：" + (fine.getBookName() == null ? "未知" : "《" + fine.getBookName() + "》") + "）";
+        record.setRemark(remarkText.length() > 180 ? remarkText.substring(0, 180) : remarkText);
         depositRecordMapper.insert(record);
         permissionService.evictUserCache(userId);
         return Result.ok("罚款缴纳成功，已解除借阅限制");

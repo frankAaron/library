@@ -33,6 +33,9 @@ public interface BorrowRecordMapper {
     /** 累计借阅总次数（动态首页活跃度判断） */
     long countTotal(@Param("userId") Long userId);
 
+    /** 最近 N 天借阅次数（活跃读者判定，更精准） */
+    long countRecent(@Param("userId") Long userId, @Param("days") int days);
+
     /** 管理端分页查询借阅记录 */
     List<BorrowRecord> selectPageAdmin(@Param("keyword") String keyword,
                                        @Param("status") Integer status,

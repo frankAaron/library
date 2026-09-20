@@ -38,6 +38,9 @@ public final class DateUtil {
      * @return 超期天数
      */
     public static int diffDaysCeil(Date later, Date earlier) {
+        if (later == null || earlier == null) {
+            return 0;
+        }
         long diff = later.getTime() - earlier.getTime();
         if (diff <= 0) {
             return 0;

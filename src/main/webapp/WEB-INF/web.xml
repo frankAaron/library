@@ -56,8 +56,13 @@
         <url-pattern>/</url-pattern>
     </servlet-mapping>
 
-    <!-- 会话超时 30 分钟 -->
+    <!-- 会话超时 30 分钟，HttpOnly 防 XSS，Secure 强制 HTTPS（本地 HTTP 开发时可注释 secure 行） -->
     <session-config>
         <session-timeout>30</session-timeout>
+        <cookie-config>
+            <http-only>true</http-only>
+            <secure>false</secure>
+            <path>/</path>
+        </cookie-config>
     </session-config>
 </web-app>

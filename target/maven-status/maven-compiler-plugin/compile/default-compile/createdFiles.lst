@@ -11,9 +11,12 @@ com\library\common\Result.class
 com\library\controller\UserController.class
 com\library\controller\AlipayController.class
 com\library\entity\Book.class
+com\library\support\CurrentUser.class
 com\library\entity\Reservation.class
 com\library\service\RecommendService.class
+com\library\support\CurrentUserArgumentResolver.class
 com\library\util\DateUtil.class
+com\library\util\PageUtil.class
 com\library\dao\BorrowRecordMapper.class
 com\library\controller\AccountController.class
 com\library\service\UserService.class
@@ -52,6 +55,7 @@ com\library\controller\PageController.class
 com\library\service\BorrowService.class
 com\library\dao\UserMapper.class
 com\library\interceptor\LoginInterceptor.class
+com\library\exception\BusinessException.class
 com\library\common\Constants.class
 com\library\controller\BorrowController.class
 com\library\dao\DepositRecordMapper.class

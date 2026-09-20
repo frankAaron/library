@@ -37,6 +37,31 @@ public class Result {
         return new Result(500, msg, null);
     }
 
+    /** 400 参数校验失败 */
+    public static Result badRequest(String msg) {
+        return new Result(400, msg, null);
+    }
+
+    /** 403 无权限 */
+    public static Result forbidden(String msg) {
+        return new Result(403, msg, null);
+    }
+
+    /** 404 资源不存在 */
+    public static Result notFound(String msg) {
+        return new Result(404, msg, null);
+    }
+
+    /** 409 业务冲突 */
+    public static Result conflict(String msg) {
+        return new Result(409, msg, null);
+    }
+
+    /** 自定义状态码 */
+    public static Result of(int code, String msg) {
+        return new Result(code, msg, null);
+    }
+
     public boolean isSuccess() {
         return code == 200;
     }

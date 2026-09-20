@@ -14,7 +14,7 @@
            http://www.springframework.org/schema/task/spring-task.xsd">
 
     <!-- ==================== 属性配置文件 ==================== -->
-    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties"
+    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties,classpath:alipay.properties"
                                   ignore-unresolvable="true"/>
 
     <!-- ==================== 持久层 + 事务 + 定时任务 + 缓存 组件扫描 ==================== -->
