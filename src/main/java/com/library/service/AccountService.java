@@ -1,0 +1,204 @@
+package com.library.service;
+
+import com.library.common.Constants;
+import com.library.common.Result;
+import com.library.dao.DepositRecordMapper;
+import com.library.dao.FineRecordMapper;
+import com.library.dao.UserMapper;
+import com.library.entity.DepositRecord;
+import com.library.entity.FineRecord;
+import com.library.entity.User;
+import com.library.service.PermissionService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 账户服务（押金管理 + 超期罚款缴纳闭环）
+ * <p>
+ * 罚款缴纳：从押金余额扣款 → 罚款单置为已缴 → 记录押金流水 → 失效用户缓存，
+ * 缴清后自动解除借阅限制，形成"超期计费→缴费→解除限制"完整闭环。
+ */
+@Service
+public class AccountService {
+
+    /** 单次押金充值上限（元） */
+    private static final BigDecimal MAX_PAY_AMOUNT = new BigDecimal("10000");
+
+    @Autowired
+    private FineRecordMapper fineRecordMapper;
+
+    @Autowired
+    private DepositRecordMapper depositRecordMapper;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private PermissionService permissionService;
+
+    /** 我的罚款列表 */
+    public List<FineRecord> myFines(Long userId) {
+        return fineRecordMapper.selectMy(userId);
+    }
+
+    /** 我的押金流水 */
+    public List<DepositRecord> myDepositRecords(Long userId) {
+        return depositRecordMapper.selectMy(userId);
+    }
+
+    /** 管理端：罚款对账分页查询 */
+    public Map<String, Object> pageFines(Integer status, Integer pageNum, Integer pageSize) {
+        int size = (pageSize == null || pageSize < 1) ? 10 : pageSize;
+        int num = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        int offset = (num - 1) * size;
+        List<FineRecord> list = fineRecordMapper.selectPageAdmin(status, offset, size);
+        long total = fineRecordMapper.countAdmin(status);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("pages", (total + size - 1) / size);
+        result.put("pageNum", num);
+        result.put("pageSize", size);
+        return result;
+    }
+
+    /**
+     * 读者缴纳超期罚款（从押金余额扣款）
+     * 事务保证：押金扣减、罚款核销、流水记录三者一致
+     */
+    @Transactional
+    public Result payFine(User sessionUser, Long fineId) {
+        FineRecord fine = fineRecordMapper.selectById(fineId);
+        if (fine == null) {
+            return Result.fail("罚款记录不存在");
+        }
+        if (!fine.getUserId().equals(sessionUser.getId())) {
+            return Result.fail("无权操作他人的罚款记录");
+        }
+        if (fine.getStatus() != Constants.FINE_UNPAID) {
+            return Result.fail("该罚款已缴纳，请勿重复操作");
+        }
+        // 取最新押金余额（缓存）
+        User user = permissionService.getUserCached(sessionUser.getId());
+        BigDecimal balance = user.getDeposit() == null ? BigDecimal.ZERO : user.getDeposit();
+        if (balance.compareTo(fine.getAmount()) < 0) {
+            return Result.fail(String.format("押金余额不足（需缴罚款%s元，当前押金余额%s元），请先充值押金",
+                    fine.getAmount().stripTrailingZeros().toPlainString(),
+                    balance.stripTrailingZeros().toPlainString()));
+        }
+        // 1. 押金扣款
+        userMapper.updateDeposit(sessionUser.getId(), fine.getAmount().negate());
+        // 2. 罚款核销（仅未缴状态生效，防止并发重复缴费）
+        if (fineRecordMapper.pay(fineId, sessionUser.getId()) == 0) {
+            throw new IllegalStateException("罚款状态已变更，请刷新后重试");
+        }
+        // 3. 押金流水
+        DepositRecord record = new DepositRecord();
+        record.setUserId(sessionUser.getId());
+        record.setAmount(fine.getAmount());
+        record.setType(Constants.DEPOSIT_DEDUCT);
+        record.setRemark("超期罚款扣款：" + (fine.getBookName() == null ? "图书借阅" : "《" + fine.getBookName() + "》"));
+        depositRecordMapper.insert(record);
+        // 4. 失效用户缓存（缴清罚款后借阅限制自动解除）
+        permissionService.evictUserCache(sessionUser.getId());
+        return Result.ok("缴费成功，超期限制已解除，可正常借阅图书");
+    }
+
+    /**
+     * 押金充值
+     */
+    @Transactional
+    public Result payDeposit(User sessionUser, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return Result.fail("充值金额必须大于0");
+        }
+        if (amount.compareTo(MAX_PAY_AMOUNT) > 0) {
+            return Result.fail("单次充值金额不能超过" + MAX_PAY_AMOUNT.stripTrailingZeros().toPlainString() + "元");
+        }
+        userMapper.updateDeposit(sessionUser.getId(), amount);
+        DepositRecord record = new DepositRecord();
+        record.setUserId(sessionUser.getId());
+        record.setAmount(amount);
+        record.setType(Constants.DEPOSIT_PAY);
+        record.setRemark("押金充值");
+        depositRecordMapper.insert(record);
+        permissionService.evictUserCache(sessionUser.getId());
+        User fresh = userMapper.selectById(sessionUser.getId());
+        return Result.ok("充值成功！当前押金余额："
+                + (fresh.getDeposit() == null ? "0" : fresh.getDeposit().stripTrailingZeros().toPlainString()) + "元");
+    }
+
+    /**
+     * 管理端人工核销罚款（对账场景：线下收款后标记已缴）
+     */
+    @Transactional
+    public Result adminMarkPaid(Long fineId, Long adminId) {
+        if (fineRecordMapper.markPaidByAdmin(fineId, adminId) == 0) {
+            return Result.fail("罚款记录不存在或已缴纳");
+        }
+        return Result.ok("已标记为已缴纳");
+    }
+
+    // ==================== 支付宝沙箱 支付流程 ====================
+
+    /** 创建支付前校验：罚款缴纳 */
+    public Result prepareFinePay(Long userId, Long fineId) {
+        FineRecord fine = fineRecordMapper.selectById(fineId);
+        if (fine == null) return Result.fail("罚款记录不存在");
+        if (!fine.getUserId().equals(userId)) return Result.fail("无权操作他人的罚款记录");
+        if (fine.getStatus() != Constants.FINE_UNPAID) return Result.fail("该罚款已缴纳");
+        return Result.ok(fine.getAmount());
+    }
+
+    /** 创建支付前校验：押金充值 */
+    public Result prepareDepositPay(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) return Result.fail("充值金额必须大于0");
+        if (amount.compareTo(MAX_PAY_AMOUNT) > 0) return Result.fail("单次充值上限 " + MAX_PAY_AMOUNT.stripTrailingZeros() + " 元");
+        return Result.ok("校验通过");
+    }
+
+    /** 支付宝回调确认：罚款核销（不再从押金扣款，因已通过支付宝支付） */
+    @Transactional
+    public Result confirmFinePaid(Long userId, Long fineId, String outTradeNo, String tradeNo) {
+        FineRecord fine = fineRecordMapper.selectById(fineId);
+        if (fine == null) return Result.fail("罚款记录不存在");
+        if (!fine.getUserId().equals(userId)) return Result.fail("无权操作");
+        if (fine.getStatus() != Constants.FINE_UNPAID) {
+            return Result.ok("该罚款已缴纳");
+        }
+        if (fineRecordMapper.pay(fineId, userId) == 0) {
+            return Result.fail("罚款状态已变更，请刷新");
+        }
+        DepositRecord record = new DepositRecord();
+        record.setUserId(userId);
+        record.setAmount(fine.getAmount());
+        record.setType(Constants.DEPOSIT_DEDUCT);
+        record.setRemark("支付宝缴纳罚款：订单号" + outTradeNo
+                + "（图书：" + (fine.getBookName() == null ? "未知" : "《" + fine.getBookName() + "》") + "）");
+        depositRecordMapper.insert(record);
+        permissionService.evictUserCache(userId);
+        return Result.ok("罚款缴纳成功，已解除借阅限制");
+    }
+
+    /** 支付宝回调确认：押金加款 */
+    @Transactional
+    public Result confirmDepositPaid(Long userId, BigDecimal amount, String outTradeNo, String tradeNo) {
+        userMapper.updateDeposit(userId, amount);
+        DepositRecord record = new DepositRecord();
+        record.setUserId(userId);
+        record.setAmount(amount);
+        record.setType(Constants.DEPOSIT_PAY);
+        record.setRemark("支付宝押金充值：订单号" + outTradeNo);
+        depositRecordMapper.insert(record);
+        permissionService.evictUserCache(userId);
+        User fresh = userMapper.selectById(userId);
+        BigDecimal bal = fresh == null || fresh.getDeposit() == null ? BigDecimal.ZERO : fresh.getDeposit();
+        return Result.ok("押金充值成功，当前余额 " + bal.stripTrailingZeros().toPlainString() + " 元");
+    }
+}

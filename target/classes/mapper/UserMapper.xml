@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.dao.UserMapper">
+
+    <!-- 新增用户（注册，按身份初始化差异化权限参数） -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_user (username, password, real_name, role, stu_or_job_no, phone, email,
+                            max_borrow_count, max_borrow_days, max_renew_count, fine_per_day,
+                            deposit, status, create_time)
+        VALUES (#{username}, #{password}, #{realName}, #{role}, #{stuOrJobNo}, #{phone}, #{email},
+                #{maxBorrowCount}, #{maxBorrowDays}, #{maxRenewCount}, #{finePerDay},
+                #{deposit}, #{status}, NOW())
+    </insert>
+
+    <select id="selectByUsername" resultType="User">
+        SELECT * FROM t_user WHERE username = #{username}
+    </select>
+
+    <select id="selectById" resultType="User">
+        SELECT * FROM t_user WHERE id = #{id}
+    </select>
+
+    <!-- 管理端读者分页查询：关键词匹配账号/姓名/学号工号，可按角色过滤 -->
+    <sql id="pageWhere">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.stu_or_job_no LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="role != null">AND u.role = #{role}</if>
+        </where>
+    </sql>
+
+    <select id="selectPage" resultType="User">
+        SELECT u.* FROM t_user u
+        <include refid="pageWhere"/>
+        ORDER BY u.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(*) FROM t_user u
+        <include refid="pageWhere"/>
+    </select>
+
+    <update id="updateProfile">
+        UPDATE t_user
+        SET real_name = #{realName}, phone = #{phone}, email = #{email}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE t_user SET password = #{password} WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_user SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 精细化权限调整：借阅额度/借阅时长/可续借次数/超期罚款标准 -->
+    <update id="updatePerm">
+        UPDATE t_user
+        SET max_borrow_count = #{maxBorrowCount},
+            max_borrow_days  = #{maxBorrowDays},
+            max_renew_count  = #{maxRenewCount},
+            fine_per_day     = #{finePerDay}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 押金原子增减（delta为负即扣减） -->
+    <update id="updateDeposit">
+        UPDATE t_user SET deposit = deposit + #{delta} WHERE id = #{id}
+    </update>
+
+    <select id="countReaders" resultType="long">
+        SELECT COUNT(*) FROM t_user WHERE role &gt; 0
+    </select>
+</mapper>

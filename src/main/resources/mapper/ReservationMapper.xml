@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.dao.ReservationMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_reservation (user_id, book_id, reserve_time, status)
+        VALUES (#{userId}, #{bookId}, NOW(), 0)
+    </insert>
+
+    <select id="selectMy" resultType="Reservation">
+        SELECT r.*, b.book_name, b.author
+        FROM t_reservation r
+        LEFT JOIN t_book b ON r.book_id = b.id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.reserve_time DESC
+    </select>
+
+    <!-- 取消预订：仅本人且排队中可取消 -->
+    <update id="cancel">
+        UPDATE t_reservation SET status = 3
+        WHERE id = #{id} AND user_id = #{userId} AND status = 0
+    </update>
+
+    <!-- 图书回库后按预订时间先后通知最早一条排队中预订 -->
+    <update id="notifyFirst">
+        UPDATE t_reservation
+        SET status = 1, notify_time = NOW()
+        WHERE book_id = #{bookId} AND status = 0
+        ORDER BY reserve_time ASC
+        LIMIT 1
+    </update>
+
+    <select id="existsActive" resultType="long">
+        SELECT COUNT(*) FROM t_reservation
+        WHERE user_id = #{userId} AND book_id = #{bookId} AND status IN (0, 1)
+    </select>
+</mapper>

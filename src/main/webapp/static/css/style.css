@@ -1,0 +1,248 @@
+/* =====================================================================
+   校园图书借阅管理系统 - 全站样式（蓝白学术风）
+   ===================================================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    background: #f3f6fb;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+a { text-decoration: none; color: inherit; }
+ul, ol { list-style: none; }
+
+/* ==================== 顶部导航 ==================== */
+.navbar {
+    background: #1f4e8c;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(31, 78, 140, .25);
+    position: sticky; top: 0; z-index: 100;
+}
+.nav-inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 16px;
+    height: 56px; display: flex; align-items: center; gap: 28px;
+}
+.logo { font-size: 18px; font-weight: bold; letter-spacing: 1px; flex-shrink: 0; }
+.nav-links { display: flex; gap: 22px; flex: 1; }
+.nav-links a { opacity: .85; padding: 6px 2px; border-bottom: 2px solid transparent; }
+.nav-links a:hover { opacity: 1; border-bottom-color: #fff; }
+.nav-user { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.nav-user .welcome { font-size: 13px; opacity: .95; }
+
+/* ==================== 布局容器 ==================== */
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 16px 40px; }
+.page-title { font-size: 20px; margin: 6px 0 18px; padding-left: 10px; border-left: 4px solid #1f4e8c; }
+.mt { margin-top: 20px; }
+
+/* ==================== 按钮 ==================== */
+.btn {
+    display: inline-block; padding: 8px 18px; border-radius: 4px;
+    border: 1px solid transparent; cursor: pointer; font-size: 13px;
+    transition: all .15s; line-height: 1.4; background: #eef1f6; color: #333;
+}
+.btn:hover { opacity: .9; }
+.btn-primary { background: #1f4e8c; color: #fff; }
+.btn-success { background: #2e8b57; color: #fff; }
+.btn-warning { background: #e67e22; color: #fff; }
+.btn-danger { background: #d9534f; color: #fff; }
+.btn-outline { background: #fff; border-color: #1f4e8c; color: #1f4e8c; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-xs { padding: 2px 8px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ==================== 卡片 ==================== */
+.card {
+    background: #fff; border-radius: 8px; padding: 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06); margin-bottom: 18px;
+}
+.card-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; color: #1f4e8c; }
+
+/* ==================== 表单 ==================== */
+.form-item { margin-bottom: 14px; }
+.form-item label { display: block; margin-bottom: 5px; color: #555; font-size: 13px; }
+.form-item input, .form-item select, .form-item textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid #d5dce6; border-radius: 4px;
+    font-size: 13px; outline: none; background: #fff;
+}
+.form-item input:focus, .form-item select:focus, .form-item textarea:focus {
+    border-color: #1f4e8c; box-shadow: 0 0 0 2px rgba(31, 78, 140, .12);
+}
+.form-row { display: flex; gap: 14px; }
+.form-row .form-item { flex: 1; }
+.filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filter-bar .form-item { margin-bottom: 0; min-width: 140px; }
+.inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.inline-form .form-item { margin-bottom: 0; }
+
+/* ==================== 表格 ==================== */
+.table { width: 100%; border-collapse: collapse; background: #fff; }
+.table th, .table td {
+    border-bottom: 1px solid #e8edf3; padding: 10px 8px; text-align: center;
+    font-size: 13px; word-break: break-all;
+}
+.table th { background: #f0f4f9; color: #4a5a6d; font-weight: bold; white-space: nowrap; }
+.table tr:hover td { background: #f7fafd; }
+.table .ops { white-space: nowrap; }
+.table .ops .btn { margin: 0 2px; }
+.table input.cell-input {
+    width: 58px; padding: 4px 5px; border: 1px solid #d5dce6; border-radius: 3px;
+    text-align: center; font-size: 12px;
+}
+
+/* ==================== 徽章（状态标签） ==================== */
+.badge {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 12px; line-height: 1.6;
+}
+.badge-blue { background: #e3ecf9; color: #1f4e8c; }
+.badge-green { background: #e3f5ea; color: #217a46; }
+.badge-orange { background: #fdeeda; color: #b9680f; }
+.badge-red { background: #fbe4e3; color: #b8362f; }
+.badge-gray { background: #eef0f3; color: #666; }
+
+/* ==================== 预警横幅 ==================== */
+.warn-banner {
+    background: #fff8e1; border: 1px solid #f5d982; border-left: 4px solid #e6a817;
+    border-radius: 6px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px;
+    color: #7a5c00; line-height: 1.9;
+}
+.warn-banner.overdue { background: #fdeceb; border-color: #f3b0ac; border-left-color: #d9534f; color: #8c2018; }
+
+/* ==================== 图书卡片网格 ==================== */
+.book-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+.book-card {
+    background: #fff; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06); transition: all .2s;
+    display: flex; flex-direction: column;
+}
+.book-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(31, 78, 140, .15); }
+.book-card .cover { height: 170px; background: #e9eef5; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.book-card .cover img { width: 100%; height: 100%; object-fit: cover; }
+.book-card .cover .ph { font-size: 44px; color: #b9c6d8; font-weight: bold; }
+.book-card .info { padding: 10px 12px 14px; flex: 1; display: flex; flex-direction: column; }
+.book-card .bname {
+    font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.book-card .meta { font-size: 12px; color: #7d8b9c; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.book-card .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 8px; }
+.stock-ok { color: #2e8b57; font-size: 12px; }
+.stock-zero { color: #d9534f; font-size: 12px; }
+
+/* ==================== 热门榜列表 ==================== */
+.rank-list li {
+    display: flex; align-items: center; gap: 12px; padding: 9px 4px;
+    border-bottom: 1px dashed #e8edf3; font-size: 13px;
+}
+.rank-list li:last-child { border-bottom: none; }
+.rank-no {
+    width: 22px; height: 22px; border-radius: 4px; background: #dfe7f2; color: #1f4e8c;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: bold; flex-shrink: 0;
+}
+.rank-no.top { background: #1f4e8c; color: #fff; }
+.rank-list .rname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-list .rcount { color: #e67e22; font-size: 12px; flex-shrink: 0; }
+
+/* ==================== 分类导航 chips ==================== */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+    padding: 6px 16px; background: #fff; border: 1px solid #d5dce6; border-radius: 16px;
+    font-size: 13px; color: #4a5a6d; transition: all .15s;
+}
+.chip:hover { background: #1f4e8c; border-color: #1f4e8c; color: #fff; }
+.chip span { color: #98a6b8; margin-left: 3px; font-size: 12px; }
+.chip:hover span { color: #d7e3f4; }
+
+/* ==================== 统计卡片 ==================== */
+.stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 18px; }
+.stat-card {
+    background: #fff; border-radius: 8px; padding: 16px; text-align: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
+}
+.stat-card .num { font-size: 26px; font-weight: bold; color: #1f4e8c; }
+.stat-card .num.warn { color: #e67e22; }
+.stat-card .num.danger { color: #d9534f; }
+.stat-card .label { margin-top: 4px; color: #7d8b9c; font-size: 12px; }
+
+/* ==================== 分页 ==================== */
+.pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 18px 0 4px; }
+.pagination button {
+    padding: 5px 12px; border: 1px solid #d5dce6; background: #fff; border-radius: 4px;
+    cursor: pointer; font-size: 13px;
+}
+.pagination button.cur { background: #1f4e8c; border-color: #1f4e8c; color: #fff; cursor: default; }
+.pagination button:disabled { opacity: .45; cursor: not-allowed; }
+.pagination span.page-info { color: #7d8b9c; font-size: 13px; margin: 0 6px; }
+
+/* ==================== 登录/注册卡片 ==================== */
+.auth-wrap { max-width: 420px; margin: 50px auto; }
+.auth-card { background: #fff; border-radius: 10px; padding: 30px 34px; box-shadow: 0 4px 20px rgba(31, 78, 140, .12); }
+.auth-card h2 { text-align: center; color: #1f4e8c; margin-bottom: 22px; font-size: 20px; }
+.auth-card .sub { text-align: center; color: #98a6b8; font-size: 12px; margin-top: 14px; }
+.auth-card .sub a { color: #1f4e8c; }
+
+/* ==================== 首页搜索区 ==================== */
+.hero {
+    background: linear-gradient(120deg, #1f4e8c 0%, #2d6bb5 100%);
+    border-radius: 10px; padding: 34px 20px; text-align: center; color: #fff;
+    margin-bottom: 20px;
+}
+.hero h1 { font-size: 24px; margin-bottom: 6px; }
+.hero p { opacity: .85; font-size: 13px; margin-bottom: 18px; }
+.search-box { display: flex; max-width: 640px; margin: 0 auto; }
+.search-box input {
+    flex: 1; border: none; border-radius: 6px 0 0 6px; padding: 12px 16px; font-size: 14px; outline: none;
+}
+.search-box button {
+    border: none; border-radius: 0 6px 6px 0; padding: 0 30px; background: #e67e22;
+    color: #fff; font-size: 14px; cursor: pointer;
+}
+.search-box button:hover { background: #d3701a; }
+
+/* ==================== 我的借阅概览卡 ==================== */
+.dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+.dash-card { background: #fff; border-radius: 8px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0, 0, 0, .06); }
+.dash-card .d-num { font-size: 22px; font-weight: bold; color: #1f4e8c; }
+.dash-card .d-label { color: #7d8b9c; font-size: 12px; margin-top: 2px; }
+
+/* ==================== 详情页 ==================== */
+.detail-wrap { display: flex; gap: 26px; background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0, 0, 0, .06); }
+.detail-cover { width: 220px; flex-shrink: 0; }
+.detail-cover img { width: 100%; border-radius: 6px; box-shadow: 0 3px 10px rgba(0, 0, 0, .15); }
+.detail-cover .ph-box {
+    width: 100%; height: 300px; background: linear-gradient(135deg, #2d6bb5, #1f4e8c);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 64px; font-weight: bold;
+}
+.detail-info { flex: 1; }
+.detail-info h2 { font-size: 22px; margin-bottom: 8px; }
+.detail-info .desc { background: #f7fafd; border-radius: 6px; padding: 12px 14px; color: #5a6b7d; line-height: 1.9; font-size: 13px; margin-top: 12px; }
+.info-table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; }
+.info-table td { padding: 6px 4px; font-size: 13px; color: #4a5a6d; }
+.info-table td:first-child { color: #98a6b8; width: 90px; }
+
+/* ==================== 提示 ==================== */
+.empty-tip { text-align: center; color: #98a6b8; padding: 30px 0; font-size: 13px; }
+.text-danger { color: #d9534f; }
+.text-warning { color: #e67e22; }
+.text-green { color: #2e8b57; }
+.text-gray { color: #98a6b8; }
+
+/* 封面缩略图（表格内） */
+.thumb {
+    width: 42px; height: 56px; object-fit: cover; border-radius: 3px; background: #e9eef5;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #b9c6d8; font-size: 16px; font-weight: bold;
+}
+
+@media (max-width: 900px) {
+    .book-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    .dash-grid { grid-template-columns: 1fr; }
+    .detail-wrap { flex-direction: column; }
+}
