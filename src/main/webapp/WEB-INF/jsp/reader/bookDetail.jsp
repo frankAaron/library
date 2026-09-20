@@ -55,6 +55,9 @@
             </table>
 
             <c:choose>
+                <c:when test="${not empty myBorrow}">
+                    <button class="btn btn-disabled" disabled>✓ 已借阅（应还：${fn:substring(myBorrow.dueDate, 0, 10)}）</button>
+                </c:when>
                 <c:when test="${book.stock > 0}">
                     <button class="btn btn-success" onclick="doBorrow(${book.id})">立即借阅</button>
                 </c:when>

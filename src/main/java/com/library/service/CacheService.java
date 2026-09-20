@@ -53,7 +53,7 @@ public class CacheService {
     /** 写入缓存（JSON 序列化 + 过期时间，单位秒） */
     public void set(String key, Object value, int ttlSeconds) {
         try (Jedis jedis = jedisPool.getResource()) {
-            jedis.setex(key, ttlSeconds, OBJECT_MAPPER.writeValueAsString(value));
+            jedis.setex(key, (long) ttlSeconds, OBJECT_MAPPER.writeValueAsString(value));
         } catch (Exception e) {
             log.warn("Redis set 降级, key={}, 原因: {}", key, e.getMessage(), e);
         }
@@ -81,7 +81,7 @@ public class CacheService {
     /** 设置过期时间（秒） */
     public void expire(String key, int ttlSeconds) {
         try (Jedis jedis = jedisPool.getResource()) {
-            jedis.expire(key, ttlSeconds);
+            jedis.expire(key, (long) ttlSeconds);
         } catch (Exception e) {
             log.warn("Redis expire 降级, key={}, 原因: {}", key, e.getMessage());
         }
@@ -90,7 +90,7 @@ public class CacheService {
     /** 带过期时间的 setnx（同 tryLock 语义，但返回 boolean 更通用） */
     public boolean setnx(String key, String value, int ttlSeconds) {
         try (Jedis jedis = jedisPool.getResource()) {
-            String result = jedis.set(key, value, SetParams.setParams().nx().ex(ttlSeconds));
+            String result = jedis.set(key, value, SetParams.setParams().nx().ex((long) ttlSeconds));
             return "OK".equals(result);
         } catch (Exception e) {
             log.warn("Redis setnx 降级, key={}, 原因: {}", key, e.getMessage());
@@ -153,7 +153,7 @@ public class CacheService {
             jedis.del(key);
             if (scoreMap != null && !scoreMap.isEmpty()) {
                 jedis.zadd(key, scoreMap);
-                jedis.expire(key, ttlSeconds);
+                jedis.expire(key, (long) ttlSeconds);
             }
         } catch (Exception e) {
             log.warn("Redis zadd 降级, key={}, 原因: {}", key, e.getMessage());
@@ -170,7 +170,7 @@ public class CacheService {
      */
     public boolean tryLock(String key, String token, long expireSeconds) {
         try (Jedis jedis = jedisPool.getResource()) {
-            String result = jedis.set(key, token, SetParams.setParams().nx().ex((int) expireSeconds));
+            String result = jedis.set(key, token, SetParams.setParams().nx().ex(expireSeconds));
             return "OK".equals(result);
         } catch (Exception e) {
             log.warn("Redis tryLock 降级, key={}, 原因: {}", key, e.getMessage());

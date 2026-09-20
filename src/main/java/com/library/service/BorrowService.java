@@ -44,6 +44,9 @@ public interface BorrowService {
     /** 记录浏览历史（个性化推荐数据源，失败不影响主流程） */
     void recordBrowse(Long userId, Long bookId);
 
+    /** 查询当前用户对某图书是否在借（未归还），返回借阅记录或null */
+    BorrowRecord currentBorrowing(Long userId, Long bookId);
+
     /** 管理端：借阅记录分页查询 */
     Map<String, Object> pageAdmin(String keyword, Integer status, String startDate, String endDate,
                                   Integer pageNum, Integer pageSize);

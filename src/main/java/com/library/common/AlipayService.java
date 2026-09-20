@@ -5,7 +5,9 @@ import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
+import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.response.AlipayTradePagePayResponse;
+import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,12 @@ public class AlipayService {
     }
 
     public String tradePagePay(String outTradeNo, String totalAmount, String subject, String body) {
+        log.info("[支付宝] 模式检查: isRealMode={}, appId={}, privateKeyLen={}, publicKeyLen={}, domain={}",
+                config.isRealMode(),
+                config.getAppId() == null ? "<null>" : (config.getAppId().isEmpty() ? "<EMPTY>" : config.getAppId()),
+                config.getPrivateKey() == null ? 0 : config.getPrivateKey().length(),
+                config.getAlipayPublicKey() == null ? 0 : config.getAlipayPublicKey().length(),
+                config.getDomain());
         if (config.isRealMode()) {
             return realTradePagePay(outTradeNo, totalAmount, subject, body);
         }
@@ -100,9 +108,9 @@ public class AlipayService {
   .amount{font-size:36px;font-weight:700;color:#ff4d4f;margin:16px 0 4px;}
   .yuan{font-size:16px;font-weight:400;margin-right:4px;}
   .mock-tip{background:#fff7e6;border:1px solid #ffd591;color:#d46b08;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:20px;}
-  .btn-pay{display:block;width:100%;height:48px;background:#1677ff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-weight:600;}
+  .btn-pay{display:block;width:100%%;height:48px;background:#1677ff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-weight:600;}
   .btn-pay:hover{background:#0958d9;}
-  .btn-cancel{display:block;width:100%;height:36px;background:transparent;color:#888;border:none;font-size:13px;cursor:pointer;margin-top:12px;}
+  .btn-cancel{display:block;width:100%%;height:36px;background:transparent;color:#888;border:none;font-size:13px;cursor:pointer;margin-top:12px;}
 </style></head><body>
 <div class="wrap">
   <div class="logo"><span>支付宝</span> Alipay</div>
@@ -143,6 +151,32 @@ public class AlipayService {
         } catch (AlipayApiException e) {
             log.error("[支付宝] 签名校验异常", e);
             return false;
+        }
+    }
+
+    public String tradeQuery(String outTradeNo, String tradeNo) {
+        try {
+            AlipayTradeQueryRequest req = new AlipayTradeQueryRequest();
+            Map<String, String> bizContent = new HashMap<>();
+            if (tradeNo != null && !tradeNo.isEmpty()) {
+                bizContent.put("trade_no", tradeNo);
+            }
+            if (outTradeNo != null && !outTradeNo.isEmpty()) {
+                bizContent.put("out_trade_no", outTradeNo);
+            }
+            req.setBizContent(new ObjectMapper().writeValueAsString(bizContent));
+            AlipayTradeQueryResponse resp = getClient().execute(req);
+            if (resp.isSuccess()) {
+                String status = resp.getTradeStatus();
+                log.info("[支付宝] 主动查询订单: outTradeNo={}, tradeNo={}, tradeStatus={}", outTradeNo, tradeNo, status);
+                return status;
+            } else {
+                log.warn("[支付宝] 主动查询订单失败: code={}, msg={}, subMsg={}", resp.getCode(), resp.getMsg(), resp.getSubMsg());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("[支付宝] 主动查询订单异常: outTradeNo={}", outTradeNo, e);
+            return null;
         }
     }
 }

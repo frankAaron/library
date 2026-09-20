@@ -7,6 +7,7 @@ C:\Users\zhume\Desktop\code\library\src\main\java\com\library\controller\HomeCon
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\dao\BookMapper.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\service\AccountService.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\dao\FineRecordMapper.java
+C:\Users\zhume\Desktop\code\library\src\main\java\com\library\support\CurrentUserArgumentResolver.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\controller\PageController.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\controller\CategoryController.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\service\CacheService.java
@@ -19,6 +20,7 @@ C:\Users\zhume\Desktop\code\library\src\main\java\com\library\dao\BorrowRecordMa
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\controller\UserController.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\util\DateUtil.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\common\RedisConfig.java
+C:\Users\zhume\Desktop\code\library\src\main\java\com\library\exception\BusinessException.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\controller\AdminBorrowController.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\controller\AlipayController.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\interceptor\RoleInterceptor.java
@@ -28,6 +30,7 @@ C:\Users\zhume\Desktop\code\library\src\main\java\com\library\interceptor\LoginI
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\task\BorrowTask.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\common\Constants.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\entity\BrowseHistory.java
+C:\Users\zhume\Desktop\code\library\src\main\java\com\library\util\PageUtil.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\dao\CategoryMapper.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\service\BookService.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\dao\ReservationMapper.java
@@ -45,6 +48,7 @@ C:\Users\zhume\Desktop\code\library\src\main\java\com\library\service\Permission
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\entity\Book.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\common\Result.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\service\impl\BookServiceImpl.java
+C:\Users\zhume\Desktop\code\library\src\main\java\com\library\support\CurrentUser.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\service\impl\UserServiceImpl.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\entity\BorrowRecord.java
 C:\Users\zhume\Desktop\code\library\src\main\java\com\library\dao\UserMapper.java

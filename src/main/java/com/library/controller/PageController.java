@@ -83,10 +83,10 @@ public class PageController {
         }
         model.addAttribute("book", book);
         model.addAttribute("category", categoryService.selectById(book.getCategoryId()));
-        // 记录浏览历史（仅读者身份，推荐算法数据源）
         User user = (User) session.getAttribute("loginUser");
         if (user != null && user.getRole() != null && user.getRole() > 0) {
             borrowService.recordBrowse(user.getId(), id);
+            model.addAttribute("myBorrow", borrowService.currentBorrowing(user.getId(), id));
         }
         return "reader/bookDetail";
     }

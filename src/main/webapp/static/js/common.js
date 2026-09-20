@@ -23,11 +23,11 @@ function ajaxPost(url, data, okCb) {
                     location.reload();
                 }
             } else {
-                alert((r && r.msg) || '操作失败，请稍后重试');
+                Toast.err((r && r.msg) || '操作失败，请稍后重试');
             }
         },
         error: function () {
-            alert('网络异常，请稍后重试');
+            Toast.err('网络异常，请稍后重试');
         }
     });
 }
@@ -152,4 +152,4 @@ var Toast = (function () {
     };
 })();
 /* 全局替换 alert 为 Toast */
-window.alert = function(msg){ Toast.info(String(msg)); };
+window.alert = function(msg){ Toast.warn(String(msg)); };

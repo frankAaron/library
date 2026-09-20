@@ -112,6 +112,8 @@ public class AlipayController {
                     ? e.getValue()[0] : "");
         }
 
+        log.info("[支付宝] 同步回调 完整参数: {}", params);
+
         String outTradeNo = req.getParameter("out_trade_no");
         String totalAmount = req.getParameter("total_amount");
         String tradeStatus = req.getParameter("trade_status");
@@ -123,27 +125,36 @@ public class AlipayController {
         String msg;
         boolean success = false;
         try {
-            if (!alipayService.verifySign(params)) {
+            boolean signOk = alipayService.verifySign(params);
+            if (!signOk) {
                 log.error("[支付宝] 同步回调签名校验失败，拒绝处理！outTradeNo={}", outTradeNo);
                 msg = "签名校验失败，支付结果不可信";
-            } else if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
-                msg = "交易状态非成功: " + tradeStatus;
-            } else if (outTradeNo != null && outTradeNo.startsWith("FINE_")) {
-                String[] parts = outTradeNo.split("_");
-                Long userId = Long.valueOf(parts[1]);
-                Long fineId = Long.valueOf(parts[2]);
-                Result r = accountService.confirmFinePaid(userId, fineId, outTradeNo, tradeNo);
-                msg = r.getMsg();
-                success = r.isSuccess();
-            } else if (outTradeNo != null && outTradeNo.startsWith("DEP_")) {
-                String[] parts = outTradeNo.split("_");
-                Long userId = Long.valueOf(parts[1]);
-                BigDecimal amt = new BigDecimal(totalAmount);
-                Result r = accountService.confirmDepositPaid(userId, amt, outTradeNo, tradeNo);
-                msg = r.getMsg();
-                success = r.isSuccess();
             } else {
-                msg = "未知的订单类型: " + outTradeNo;
+                log.info("[支付宝] 同步回调签名校验通过");
+                boolean tradeSuccess = "TRADE_SUCCESS".equals(tradeStatus)
+                        || "TRADE_FINISHED".equals(tradeStatus)
+                        || (tradeStatus == null && tradeNo != null && !tradeNo.isEmpty());
+                log.info("[支付宝] 同步回调 交易判定: tradeStatus={}, tradeNo={}, 判定成功={}", tradeStatus, tradeNo, tradeSuccess);
+
+                if (!tradeSuccess) {
+                    msg = "交易状态非成功: tradeStatus=" + tradeStatus + ", tradeNo=" + tradeNo;
+                } else if (outTradeNo != null && outTradeNo.startsWith("FINE_")) {
+                    String[] parts = outTradeNo.split("_");
+                    Long userId = Long.valueOf(parts[1]);
+                    Long fineId = Long.valueOf(parts[2]);
+                    Result r = accountService.confirmFinePaid(userId, fineId, outTradeNo, tradeNo);
+                    msg = r.getMsg();
+                    success = r.isSuccess();
+                } else if (outTradeNo != null && outTradeNo.startsWith("DEP_")) {
+                    String[] parts = outTradeNo.split("_");
+                    Long userId = Long.valueOf(parts[1]);
+                    BigDecimal amt = new BigDecimal(totalAmount);
+                    Result r = accountService.confirmDepositPaid(userId, amt, outTradeNo, tradeNo);
+                    msg = r.getMsg();
+                    success = r.isSuccess();
+                } else {
+                    msg = "未知的订单类型: " + outTradeNo;
+                }
             }
         } catch (Exception e) {
             log.error("[支付宝] 回调处理异常", e);

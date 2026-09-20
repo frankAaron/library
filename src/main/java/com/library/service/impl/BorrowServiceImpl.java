@@ -236,9 +236,14 @@ public class BorrowServiceImpl implements BorrowService {
             history.setBrowseTime(new Date());
             browseHistoryMapper.insert(history);
         } catch (Exception e) {
-            // 浏览历史记录失败不影响详情页正常访问
             log.warn("记录浏览历史失败, userId={}, bookId={}", userId, bookId, e);
         }
+    }
+
+    @Override
+    public BorrowRecord currentBorrowing(Long userId, Long bookId) {
+        if (userId == null || bookId == null) return null;
+        return borrowRecordMapper.selectBorrowing(userId, bookId);
     }
 
     @Override

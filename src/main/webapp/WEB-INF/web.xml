@@ -12,7 +12,7 @@
         <file-size-threshold>0</file-size-threshold>
     </multipart-config>
 
-    <display-name>library-ssm</display-name>
+    <display-name>library</display-name>
 
     <!-- Spring 根容器 -->
     <context-param>

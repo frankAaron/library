@@ -5,15 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.library</groupId>
-    <artifactId>library-ssm</artifactId>
+    <artifactId>library</artifactId>
     <version>1.0.0</version>
     <packaging>war</packaging>
-    <name>library-ssm</name>
+    <name>library</name>
     <description>基于SSM的在线图书借阅管理系统</description>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.version>6.1.14</spring.version>
     </properties>
