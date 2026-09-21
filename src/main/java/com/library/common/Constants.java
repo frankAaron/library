@@ -28,7 +28,7 @@ public final class Constants {
     public static final int RECORD_RETURNED = 1;
     /** 超期（借阅中且已过应还日期） */
     public static final int RECORD_OVERDUE = 2;
-    /** 超期已缴费归还 */
+    /** 超期归还（已生成待缴罚款单，缴清状态见罚款记录） */
     public static final int RECORD_OVERDUE_PAID = 3;
 
     /* ==================== 预订状态 ==================== */
@@ -55,6 +55,7 @@ public final class Constants {
     public static final int NOTIFY_OVERDUE_FROZEN = 3;
     public static final int NOTIFY_FINE_GENERATED = 4;
     public static final int NOTIFY_REFUND_RESULT = 5;
+    public static final int NOTIFY_UNFROZEN = 6;
     public static final int NOTIFY_ADMIN_SYSTEM = 99;
 
     /* ==================== 押金退款申请状态 ==================== */

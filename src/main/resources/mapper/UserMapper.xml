@@ -69,9 +69,10 @@
         WHERE id = #{id}
     </update>
 
-    <!-- 押金原子增减（delta为负即扣减） -->
+    <!-- 押金原子增减（delta为负即扣减），扣减后余额不能为负，防止并发扣款/退款审核导致负余额 -->
     <update id="updateDeposit">
-        UPDATE t_user SET deposit = deposit + #{delta} WHERE id = #{id}
+        UPDATE t_user SET deposit = deposit + #{delta}
+        WHERE id = #{id} AND deposit + #{delta} &gt;= 0
     </update>
 
     <select id="countReaders" resultType="long">
@@ -87,10 +88,11 @@
         WHERE role = #{role}
     </update>
 
+    <!-- 取当前前缀下最大编号：先按长度再按字典序倒序，兼容序号超过 3 位（999 → 1000） -->
     <select id="selectMaxStuNoByPrefix" resultType="string">
         SELECT stu_or_job_no FROM t_user
         WHERE stu_or_job_no LIKE CONCAT(#{prefix}, '%')
-        ORDER BY stu_or_job_no DESC
+        ORDER BY LENGTH(stu_or_job_no) DESC, stu_or_job_no DESC
         LIMIT 1
     </select>
 </mapper>

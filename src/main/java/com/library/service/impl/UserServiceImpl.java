@@ -8,7 +8,10 @@ import com.library.service.CacheService;
 import com.library.service.PermissionService;
 import com.library.service.UserService;
 import com.library.util.MD5Util;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,11 @@ import java.util.Map;
  */
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
+    /** 自动生成学号/工号撞号（uk_stu_no 唯一索引冲突）时的最大重试次数 */
+    private static final int STU_NO_MAX_ATTEMPTS = 4;
 
     private static final String LOCK_PREFIX = "library:login:lock:";
     private static final String FAIL_PREFIX = "library:login:fail:";
@@ -63,23 +71,44 @@ public class UserServiceImpl implements UserService {
         if (role == null || role < Constants.ROLE_STUDENT || role > Constants.ROLE_VISITOR) {
             return Result.fail("请选择正确的读者身份");
         }
-        // 3. 用户名唯一性校验
-        if (userMapper.selectByUsername(user.getUsername().trim()) != null) {
+        // 3. 用户名唯一性校验（快速失败，最终由 uk_username 唯一索引兜底并发）
+        String username = user.getUsername().trim();
+        if (userMapper.selectByUsername(username) != null) {
             return Result.fail("该账号已被注册，请更换账号");
         }
         // 4. 按身份初始化差异化权限参数
         initPermByRole(user, role);
-        // 5. 自动生成学号/工号（格式：S/T/V + 年份 + 3位序号，如 S2026001）
-        String stuNo = user.getStuOrJobNo();
-        if (stuNo == null || stuNo.trim().isEmpty()) {
-            user.setStuOrJobNo(generateStuNo(role));
+        // 5. 学号/工号：用户未填则自动生成（S/T/V + 年份 + 3位序号，如 S2026001）
+        boolean customStuNo = !isBlank(user.getStuOrJobNo());
+        if (customStuNo) {
+            user.setStuOrJobNo(user.getStuOrJobNo().trim());
         }
-        user.setUsername(user.getUsername().trim());
+        user.setUsername(username);
         user.setPassword(MD5Util.encrypt(user.getPassword()));
         user.setDeposit(BigDecimal.ZERO);
         user.setStatus(0);
-        userMapper.insert(user);
-        return Result.ok("注册成功，请登录");
+        // 6. 写入：uk_username / uk_stu_no 唯一索引兜底并发
+        //    自动生成的学号撞号时重新取号重试；手填学号撞号直接提示
+        int maxAttempts = customStuNo ? 1 : STU_NO_MAX_ATTEMPTS;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            if (!customStuNo) {
+                user.setStuOrJobNo(generateStuNo(role));
+            }
+            try {
+                userMapper.insert(user);
+                return Result.ok("注册成功，请登录");
+            } catch (DuplicateKeyException e) {
+                // 区分冲突的唯一键：回查用户名是否已被并发注册占用
+                if (userMapper.selectByUsername(username) != null) {
+                    return Result.fail("该账号已被注册，请更换账号");
+                }
+                if (customStuNo) {
+                    return Result.fail("该学号/工号已被注册，请更换或联系管理员");
+                }
+                log.warn("自动生成学号/工号并发冲突，第{}次重试 role={}", attempt, role);
+            }
+        }
+        return Result.fail("当前注册人数较多，请稍后重试");
     }
 
     /** 按角色写入默认借阅权限参数 */

@@ -67,13 +67,18 @@ public class DepositRefundService {
 
     @Transactional
     public Result adminHandle(Long refundId, Integer status, String adminRemark, Long adminId) {
+        if (refundId == null || status == null
+                || (status != Constants.REFUND_APPROVED && status != Constants.REFUND_REJECTED)) {
+            return Result.fail("处理结果参数错误");
+        }
         DepositRefund r = depositRefundMapper.selectById(refundId);
         if (r == null) return Result.fail("退款申请不存在");
         if (r.getStatus() != Constants.REFUND_PENDING) return Result.fail("该申请已处理，请勿重复操作");
         String remark = adminRemark == null ? "" : adminRemark.length() > 500 ? adminRemark.substring(0, 500) : adminRemark;
         if (status == Constants.REFUND_APPROVED) {
+            // updateDeposit 带余额下限保护：余额不足（申请后可能已消费押金）时扣减失败
             int rows = userMapper.updateDeposit(r.getUserId(), r.getAmount().negate());
-            if (rows == 0) return Result.fail("押金扣减失败，请检查用户状态");
+            if (rows == 0) return Result.fail("用户当前押金余额不足，无法退款");
             DepositRecord dr = new DepositRecord();
             dr.setUserId(r.getUserId());
             dr.setAmount(r.getAmount().negate());

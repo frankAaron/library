@@ -165,7 +165,14 @@
                SUM(fine_per_day * DATEDIFF(NOW(), due_date)) AS overdueTotal
         FROM t_borrow_record br
         LEFT JOIN t_user u ON br.user_id = u.id
-        WHERE br.status = 2
+        WHERE br.status = 2 AND u.status = 0
         GROUP BY user_id
+    </select>
+
+    <!-- 缴清罚款后自动解冻检查：用户是否仍存在超期≥days天未归还的记录 -->
+    <select id="countLongOverdueByUser" resultType="long">
+        SELECT COUNT(*) FROM t_borrow_record
+        WHERE user_id = #{userId} AND status = 2
+          AND DATEDIFF(NOW(), due_date) &gt;= #{days}
     </select>
 </mapper>

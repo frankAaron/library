@@ -29,7 +29,8 @@ CREATE TABLE t_user (
   status            TINYINT       NOT NULL DEFAULT 0 COMMENT '0正常 1停用',
   create_time       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   PRIMARY KEY (id),
-  UNIQUE KEY uk_username (username)
+  UNIQUE KEY uk_username (username),
+  UNIQUE KEY uk_stu_no (stu_or_job_no)
 ) ENGINE=InnoDB COMMENT='用户表';
 
 -- ---------------------------------------------------------------------

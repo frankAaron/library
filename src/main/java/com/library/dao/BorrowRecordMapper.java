@@ -85,6 +85,9 @@ public interface BorrowRecordMapper {
     /** 定时任务：单本超期 ≥ days 天的用户，自动冻结 status=1，返回影响行数 */
     int freezeByOverdueDays(@Param("days") int days);
 
-    /** 定时任务：查询所有当前有超期在借的用户及其超期应缴金额 */
+    /** 定时任务：查询所有当前有超期在借且未冻结的用户及其超期应缴金额 */
     List<Map<String, Object>> listOverdueUserTotal();
+
+    /** 缴清罚款后自动解冻检查：用户是否仍存在超期≥days天未归还的记录 */
+    long countLongOverdueByUser(@Param("userId") Long userId, @Param("days") int days);
 }
