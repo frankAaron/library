@@ -27,6 +27,8 @@ public class Reservation {
     private String author;
     /** 预订人姓名 */
     private String realName;
+    /** 预订人邮箱（联查） */
+    private String email;
 
     public Reservation() {
     }
@@ -49,4 +51,6 @@ public class Reservation {
     public void setAuthor(String author) { this.author = author; }
     public String getRealName() { return realName; }
     public void setRealName(String realName) { this.realName = realName; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 }

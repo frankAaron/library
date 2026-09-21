@@ -33,6 +33,41 @@
         </div>
     </div>
 
+    <%-- ==================== 按角色批量调整权限 ==================== --%>
+    <div class="card">
+        <div class="card-title">按角色批量调整权限 <span class="text-gray" style="font-size:12px;font-weight:normal">一键批量更新某身份下所有读者的借阅参数，覆盖原值</span></div>
+        <div class="filter-bar" style="flex-wrap:wrap;">
+            <div class="form-item">
+                <label>目标身份</label>
+                <select id="bRole">
+                    <option value="1">学生</option>
+                    <option value="2">教师</option>
+                    <option value="3">访客</option>
+                </select>
+            </div>
+            <div class="form-item">
+                <label>借阅额度(本)</label>
+                <input type="number" id="bCount" value="5" min="0">
+            </div>
+            <div class="form-item">
+                <label>借阅天数</label>
+                <input type="number" id="bDays" value="30" min="0">
+            </div>
+            <div class="form-item">
+                <label>可续借次数</label>
+                <input type="number" id="bRenew" value="1" min="0">
+            </div>
+            <div class="form-item">
+                <label>超期罚款(元/天)</label>
+                <input type="number" id="bFine" value="0.50" min="0" step="0.01">
+            </div>
+            <button class="btn btn-primary" onclick="batchApply()">一键批量应用</button>
+            <button class="btn btn-success" onclick="applyPreset('student')">恢复学生默认</button>
+            <button class="btn btn-success" onclick="applyPreset('teacher')">恢复教师默认</button>
+            <button class="btn btn-success" onclick="applyPreset('visitor')">恢复访客默认</button>
+        </div>
+    </div>
+
     <div class="card">
         <div class="text-gray" style="font-size:12px;margin-bottom:10px;">
             说明：可直接修改各读者的借阅额度 / 借阅天数 / 可续借次数 / 罚款标准，点击「保存权限」立即生效（Redis 权限缓存同步失效）。
@@ -140,6 +175,38 @@
             alert(r.msg);
             loadPage(pageNum);
         });
+    }
+
+    /** 按角色批量应用权限 */
+    function batchApply() {
+        var role = parseInt($('#bRole').val());
+        var roleName = ROLE_NAMES[role];
+        if (!confirm('确认将所有' + roleName + '的权限批量更新为当前参数？此操作将覆盖原值')) return;
+        ajaxPost(ctx + '/admin/user/batchUpdatePerm', {
+            role: role,
+            maxBorrowCount: parseInt($('#bCount').val()),
+            maxBorrowDays: parseInt($('#bDays').val()),
+            maxRenewCount: parseInt($('#bRenew').val()),
+            finePerDay: parseFloat($('#bFine').val())
+        }, function (r) {
+            alert(r.msg);
+            loadPage(pageNum);
+        });
+    }
+
+    /** 恢复角色默认权限预设 */
+    function applyPreset(role) {
+        var presets = {
+            student: {role: 1, count: 5, days: 30, renew: 1, fine: 0.50},
+            teacher: {role: 2, count: 10, days: 60, renew: 2, fine: 0.30},
+            visitor: {role: 3, count: 2,  days: 15, renew: 0, fine: 1.00}
+        };
+        var p = presets[role];
+        $('#bRole').val(p.role);
+        $('#bCount').val(p.count);
+        $('#bDays').val(p.days);
+        $('#bRenew').val(p.renew);
+        $('#bFine').val(p.fine);
     }
 
     loadPage(1);

@@ -25,6 +25,10 @@
                     <a class="btn btn-primary btn-sm" href="${pageContext.request.contextPath}/toRegister">注册</a>
                 </c:when>
                 <c:otherwise>
+                    <a href="${pageContext.request.contextPath}/user/toNotifications" class="notify-bell" title="消息中心">
+                        <span class="bell-icon">🔔</span>
+                        <span id="unreadDot" class="badge-dot" style="display:none;">0</span>
+                    </a>
                     <span class="welcome">
                         ${sessionScope.loginUser.realName}
                         <c:choose>
@@ -40,3 +44,33 @@
         </div>
     </div>
 </header>
+
+<style>
+.notify-bell{position:relative;padding:6px 8px;margin-right:6px;font-size:18px;text-decoration:none;}
+.notify-bell:hover{opacity:.8;}
+.notify-bell .badge-dot{position:absolute;top:-2px;right:-2px;background:#e74c3c;color:#fff;font-size:11px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;font-weight:bold;box-shadow:0 0 0 2px #fff;}
+</style>
+
+<c:if test="${not empty sessionScope.loginUser}">
+<script>
+(function(){
+    var dot = document.getElementById('unreadDot');
+    if(!dot) return;
+    var ctx = '${pageContext.request.contextPath}';
+    function tick(){
+        $.get(ctx + '/notify/list', function(r){
+            if(r.success){
+                var n = r.data.unread || 0;
+                if(n > 0){
+                    dot.textContent = n > 99 ? '99+' : n;
+                    dot.style.display = 'flex';
+                } else {
+                    dot.style.display = 'none';
+                }
+            }
+        });
+    }
+    if(typeof $ !== 'undefined'){ tick(); setInterval(tick, 30000); }
+})();
+</script>
+</c:if>

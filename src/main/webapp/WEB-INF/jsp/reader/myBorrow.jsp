@@ -78,7 +78,7 @@
         </table>
     </div>
 
-    <div style="display:flex; gap:18px; align-items:flex-start;">
+    <div style="display:flex; gap:18px; align-items:stretch;">
         <%-- ==================== 我的预订 ==================== --%>
         <div class="card" style="flex:1;">
             <div class="card-title">我的预订</div>

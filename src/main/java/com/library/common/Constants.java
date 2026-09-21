@@ -49,6 +49,25 @@ public final class Constants {
     /* ==================== 到期预警提前天数 ==================== */
     public static final int DUE_WARN_DAYS = 3;
 
+    /* ==================== 站内消息类型 ==================== */
+    public static final int NOTIFY_RESERVE_READY = 1;
+    public static final int NOTIFY_DUE_SOON = 2;
+    public static final int NOTIFY_OVERDUE_FROZEN = 3;
+    public static final int NOTIFY_FINE_GENERATED = 4;
+    public static final int NOTIFY_REFUND_RESULT = 5;
+    public static final int NOTIFY_ADMIN_SYSTEM = 99;
+
+    /* ==================== 押金退款申请状态 ==================== */
+    public static final int REFUND_PENDING = 0;
+    public static final int REFUND_APPROVED = 1;
+    public static final int REFUND_REJECTED = 2;
+
+    /* ==================== 超期冻结策略（阈值） ==================== */
+    /** 累计未缴罚款 ≥ 该阈值自动限制借阅（元） */
+    public static final java.math.BigDecimal FINE_FREEZE_THRESHOLD = new java.math.BigDecimal("50");
+    /** 单本超期 ≥ 该天数直接冻结账号（天） */
+    public static final int OVERDUE_FREEZE_DAYS = 15;
+
     /* ==================== Redis 缓存 Key 常量 ==================== */
     /** 热门图书榜单(ZSet) */
     public static final String KEY_HOT_BOOKS = "book:hot:top10";

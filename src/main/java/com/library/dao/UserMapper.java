@@ -46,4 +46,14 @@ public interface UserMapper {
 
     /** 统计读者数量（role>0，管理端统计） */
     long countReaders();
+
+    /** 按角色批量调整权限参数（管理员一键批量更新） */
+    int batchUpdatePermByRole(@Param("role") Integer role,
+                              @Param("maxBorrowCount") Integer maxBorrowCount,
+                              @Param("maxBorrowDays") Integer maxBorrowDays,
+                              @Param("maxRenewCount") Integer maxRenewCount,
+                              @Param("finePerDay") java.math.BigDecimal finePerDay);
+
+    /** 查询指定前缀的最大 stu_or_job_no，用于自动生成学号/工号 */
+    String selectMaxStuNoByPrefix(@Param("prefix") String prefix);
 }

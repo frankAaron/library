@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Param;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 借阅记录 DAO
@@ -20,6 +21,9 @@ public interface BorrowRecordMapper {
 
     /** 查询某用户对某图书的在借记录（状态0/2） */
     BorrowRecord selectBorrowing(@Param("userId") Long userId, @Param("bookId") Long bookId);
+
+    /** 查询某用户所有在借图书ID集合（状态0/2） */
+    List<Long> selectBorrowingBookIds(@Param("userId") Long userId);
 
     /** 我的借阅列表（联查图书信息） */
     List<BorrowRecord> selectMy(@Param("userId") Long userId);
@@ -74,4 +78,13 @@ public interface BorrowRecordMapper {
 
     /** 全部临期记录数量（到期预警任务日志） */
     long countDueSoonAll(@Param("days") int days);
+
+    /** 定时任务：按用户分组统计临期借阅数量，用于批量发送到期提醒 */
+    List<Map<String, Object>> countDueSoonByUser(@Param("days") int days);
+
+    /** 定时任务：单本超期 ≥ days 天的用户，自动冻结 status=1，返回影响行数 */
+    int freezeByOverdueDays(@Param("days") int days);
+
+    /** 定时任务：查询所有当前有超期在借的用户及其超期应缴金额 */
+    List<Map<String, Object>> listOverdueUserTotal();
 }

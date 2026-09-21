@@ -46,4 +46,15 @@ public class AdminUserController {
         Long status = param.get("status");
         return userService.updateStatus(id, status == null ? null : status.intValue());
     }
+
+    /** 按角色批量调整权限参数 */
+    @PostMapping("/batchUpdatePerm")
+    public Result batchUpdatePerm(@RequestBody Map<String, Object> param) {
+        Integer role = param.get("role") == null ? null : ((Number) param.get("role")).intValue();
+        Integer maxBorrowCount = param.get("maxBorrowCount") == null ? null : ((Number) param.get("maxBorrowCount")).intValue();
+        Integer maxBorrowDays = param.get("maxBorrowDays") == null ? null : ((Number) param.get("maxBorrowDays")).intValue();
+        Integer maxRenewCount = param.get("maxRenewCount") == null ? null : ((Number) param.get("maxRenewCount")).intValue();
+        java.math.BigDecimal finePerDay = param.get("finePerDay") == null ? null : new java.math.BigDecimal(param.get("finePerDay").toString());
+        return userService.batchUpdatePermByRole(role, maxBorrowCount, maxBorrowDays, maxRenewCount, finePerDay);
+    }
 }

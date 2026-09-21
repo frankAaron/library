@@ -15,6 +15,7 @@ import com.library.entity.Reservation;
 import com.library.entity.User;
 import com.library.service.BookService;
 import com.library.service.BorrowService;
+import com.library.service.NotificationService;
 import com.library.service.PermissionService;
 import com.library.util.DateUtil;
 import org.slf4j.Logger;
@@ -27,8 +28,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 借阅业务实现（全流程自动化核心）
@@ -61,6 +64,9 @@ public class BorrowServiceImpl implements BorrowService {
 
     @Autowired
     private PermissionService permissionService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     private BookService bookService;
@@ -136,16 +142,68 @@ public class BorrowServiceImpl implements BorrowService {
         borrowRecordMapper.markReturned(record.getId(), now, fine);
         // 3. 回补库存
         bookMapper.restoreStock(record.getBookId());
-        // 4. 通知排队预订的第一位读者
+        // 4. 如果有排队预订的第一位读者 → 自动分配（库存立即再扣 1，净效果不变）
+        Reservation firstWaiting = reservationMapper.selectFirstWaitingWithBook(record.getBookId());
         String msg;
+        if (firstWaiting != null) {
+            User nextUser = permissionService.getUserCached(firstWaiting.getUserId());
+            if (nextUser != null
+                    && nextUser.getStatus() == 0
+                    && borrowRecordMapper.countBorrowing(nextUser.getId()) < nextUser.getMaxBorrowCount()) {
+                // 给预订读者立即扣库存 + 创建借阅记录
+                if (bookMapper.deductStock(record.getBookId()) > 0) {
+                    Book autoBook = bookMapper.selectById(record.getBookId());
+                    BorrowRecord autoRecord = new BorrowRecord();
+                    autoRecord.setUserId(nextUser.getId());
+                    autoRecord.setBookId(record.getBookId());
+                    autoRecord.setBookName(autoBook != null ? autoBook.getBookName() : null);
+                    autoRecord.setBorrowDate(now);
+                    autoRecord.setDueDate(DateUtil.addDays(now, nextUser.getMaxBorrowDays()));
+                    autoRecord.setStatus(Constants.RECORD_BORROWING);
+                    autoRecord.setRenewCount(0);
+                    autoRecord.setFineAmount(BigDecimal.ZERO);
+                    borrowRecordMapper.insert(autoRecord);
+                    // 预订状态置为"已完成"
+                    reservationMapper.finish(firstWaiting.getId());
+                    bookMapper.incrBorrowCount(record.getBookId());
+                    bookService.evictHot();
+                    // 给预订读者发站内消息 + 邮件
+                    String bookTitle = firstWaiting.getBookName() == null ? "该图书" : "《" + firstWaiting.getBookName() + "》";
+                    try {
+                        notificationService.send(nextUser.getId(), Constants.NOTIFY_RESERVE_READY,
+                                "您预订的图书已自动借阅",
+                                bookTitle + " 已自动借阅成功！应还日期："
+                                        + DateUtil.fmtDate(autoRecord.getDueDate()));
+                    } catch (Exception e) {
+                        log.warn("预订自动分配通知发送失败: {}", e.getMessage());
+                    }
+                } else {
+                    // 理论上 restoreStock 后库存必 ≥1，这里保底
+                    reservationMapper.notifyFirst(record.getBookId());
+                }
+            } else {
+                // 预订读者账号有问题（停用/额度满/冻结），降级为仅通知
+                reservationMapper.notifyFirst(record.getBookId());
+            }
+        } else {
+            firstWaiting = null;
+        }
         if (overdue) {
             msg = "归还成功！该书已超期" + overdueDays + "天，产生罚款" + fine.stripTrailingZeros().toPlainString()
                     + "元，请前往「我的借阅」缴纳罚款，未缴清前无法继续借阅";
+            if (fine.compareTo(BigDecimal.ZERO) > 0) {
+                try {
+                    notificationService.send(record.getUserId(), Constants.NOTIFY_FINE_GENERATED,
+                            "您有新的超期罚款待缴",
+                            "图书《" + (record.getBookName() == null ? "" : record.getBookName())
+                                    + "》超期归还，罚款金额 " + fine.stripTrailingZeros().toPlainString()
+                                    + " 元，请尽快前往「我的借阅」缴纳。");
+                } catch (Exception e) {
+                    log.warn("罚款通知消息发送失败: {}", e.getMessage());
+                }
+            }
         } else {
             msg = "归还成功！感谢按时归还";
-        }
-        if (reservationMapper.notifyFirst(record.getBookId()) > 0) {
-            msg += "；该书已有排队预订读者，已通知第一位预订读者";
         }
         return Result.ok(msg);
     }
@@ -244,6 +302,24 @@ public class BorrowServiceImpl implements BorrowService {
     public BorrowRecord currentBorrowing(Long userId, Long bookId) {
         if (userId == null || bookId == null) return null;
         return borrowRecordMapper.selectBorrowing(userId, bookId);
+    }
+
+    @Override
+    public boolean currentReserving(Long userId, Long bookId) {
+        if (userId == null || bookId == null) return false;
+        return reservationMapper.existsActive(userId, bookId) > 0;
+    }
+
+    @Override
+    public Set<Long> myBorrowingBookIds(Long userId) {
+        if (userId == null) return new HashSet<>();
+        return new HashSet<>(borrowRecordMapper.selectBorrowingBookIds(userId));
+    }
+
+    @Override
+    public Set<Long> myReservingBookIds(Long userId) {
+        if (userId == null) return new HashSet<>();
+        return new HashSet<>(reservationMapper.selectActiveBookIds(userId));
     }
 
     @Override

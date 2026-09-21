@@ -85,6 +85,12 @@
                     <td>${b.borrowCount}</td>
                     <td class="ops">
                         <c:choose>
+                            <c:when test="${not empty myBorrowMap and myBorrowMap[b.id]}">
+                                <button class="btn btn-disabled btn-sm" disabled>✓ 已借阅</button>
+                            </c:when>
+                            <c:when test="${not empty myReserveMap and myReserveMap[b.id]}">
+                                <button class="btn btn-disabled btn-sm" disabled>✓ 已预订</button>
+                            </c:when>
                             <c:when test="${b.stock > 0}">
                                 <button class="btn btn-success btn-sm" onclick="doBorrow(${b.id}, this)">借阅</button>
                             </c:when>

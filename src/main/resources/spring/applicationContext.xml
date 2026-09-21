@@ -14,11 +14,11 @@
            http://www.springframework.org/schema/task/spring-task.xsd">
 
     <!-- ==================== 属性配置文件 ==================== -->
-    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties,classpath:alipay.properties"
+    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties,classpath:alipay.properties,classpath:mail.properties"
                                   ignore-unresolvable="true"/>
 
     <!-- ==================== 持久层 + 事务 + 定时任务 + 缓存 组件扫描 ==================== -->
-    <context:component-scan base-package="com.library.service,com.library.task,com.library.common,com.library.util"/>
+    <context:component-scan base-package="com.library.service,com.library.task,com.library.common,com.library.util,com.library.mail"/>
 
     <!-- ==================== Druid 数据源 ==================== -->
     <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"

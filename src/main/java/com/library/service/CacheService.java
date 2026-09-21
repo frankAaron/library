@@ -15,6 +15,8 @@ import redis.clients.jedis.params.SetParams;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import redis.clients.jedis.ScanParams;
+import redis.clients.jedis.ScanResult;
 
 /**
  * Redis 缓存服务（热点数据缓存核心组件）
@@ -188,5 +190,23 @@ public class CacheService {
         } catch (Exception e) {
             log.warn("Redis releaseLock 降级, key={}, 原因: {}", key, e.getMessage());
         }
+    }
+
+    public long evictPattern(String pattern) {
+        long deleted = 0;
+        try (Jedis jedis = jedisPool.getResource()) {
+            String cursor = "0";
+            ScanParams params = new ScanParams().match(pattern).count(100);
+            do {
+                ScanResult<String> result = jedis.scan(cursor, params);
+                for (String key : result.getResult()) {
+                    deleted += jedis.del(key);
+                }
+                cursor = result.getCursor();
+            } while (!"0".equals(cursor));
+        } catch (Exception e) {
+            log.warn("Redis evictPattern 降级, pattern={}, 原因: {}", pattern, e.getMessage());
+        }
+        return deleted;
     }
 }

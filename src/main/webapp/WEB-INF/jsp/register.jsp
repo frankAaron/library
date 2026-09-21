@@ -42,7 +42,7 @@
         <div class="form-row">
             <div class="form-item">
                 <label>学号 / 工号</label>
-                <input type="text" id="stuOrJobNo" placeholder="选填" maxlength="30">
+                <input type="text" disabled value="系统将自动生成" style="color:#999;background:#f5f5f5;">
             </div>
             <div class="form-item">
                 <label>手机号</label>
@@ -86,7 +86,6 @@
             password: password,
             realName: realName,
             role: parseInt($('#role').val()),
-            stuOrJobNo: $.trim($('#stuOrJobNo').val()),
             phone: $.trim($('#phone').val()),
             email: $.trim($('#email').val())
         }, function (r) {

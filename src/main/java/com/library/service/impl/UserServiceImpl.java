@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,11 @@ public class UserServiceImpl implements UserService {
         }
         // 4. 按身份初始化差异化权限参数
         initPermByRole(user, role);
+        // 5. 自动生成学号/工号（格式：S/T/V + 年份 + 3位序号，如 S2026001）
+        String stuNo = user.getStuOrJobNo();
+        if (stuNo == null || stuNo.trim().isEmpty()) {
+            user.setStuOrJobNo(generateStuNo(role));
+        }
         user.setUsername(user.getUsername().trim());
         user.setPassword(MD5Util.encrypt(user.getPassword()));
         user.setDeposit(BigDecimal.ZERO);
@@ -97,6 +103,31 @@ public class UserServiceImpl implements UserService {
                 user.setMaxRenewCount(0);
                 user.setFinePerDay(new BigDecimal("1.00"));
         }
+    }
+
+    /**
+     * 自动生成学号/工号：前缀 + 年份 + 3位序号
+     * 学生 S2026001 | 教师 T2026001 | 访客 V2026001
+     * 按自然年重置序号，每年从 001 开始
+     */
+    private String generateStuNo(Integer role) {
+        String prefix;
+        switch (role) {
+            case Constants.ROLE_STUDENT: prefix = "S"; break;
+            case Constants.ROLE_TEACHER: prefix = "T"; break;
+            default:                     prefix = "V"; break;
+        }
+        String year = String.valueOf(LocalDateTime.now().getYear());
+        String fullPrefix = prefix + year;
+        String maxNo = userMapper.selectMaxStuNoByPrefix(fullPrefix);
+        int nextSeq = 1;
+        if (maxNo != null && maxNo.length() > fullPrefix.length()) {
+            try {
+                String tail = maxNo.substring(fullPrefix.length());
+                nextSeq = Integer.parseInt(tail) + 1;
+            } catch (NumberFormatException ignored) {}
+        }
+        return fullPrefix + String.format("%03d", nextSeq);
     }
 
     @Override
@@ -214,6 +245,27 @@ public class UserServiceImpl implements UserService {
         userMapper.updateStatus(userId, status);
         permissionService.evictUserCache(userId);
         return Result.ok(status == 1 ? "账号已停用" : "账号已启用");
+    }
+
+    @Override
+    @Transactional
+    public Result batchUpdatePermByRole(Integer role, Integer maxBorrowCount, Integer maxBorrowDays,
+                                        Integer maxRenewCount, BigDecimal finePerDay) {
+        if (role == null || role < Constants.ROLE_STUDENT || role > Constants.ROLE_VISITOR) {
+            return Result.fail("请选择有效的读者身份（学生/教师/访客）");
+        }
+        if (maxBorrowCount == null || maxBorrowCount < 0
+                || maxBorrowDays == null || maxBorrowDays < 0
+                || maxRenewCount == null || maxRenewCount < 0
+                || finePerDay == null || finePerDay.compareTo(BigDecimal.ZERO) < 0) {
+            return Result.fail("权限参数不合法，请检查后重新提交");
+        }
+        int affected = userMapper.batchUpdatePermByRole(role, maxBorrowCount, maxBorrowDays,
+                maxRenewCount, finePerDay);
+        permissionService.evictUserCacheByRole(role);
+        String roleName = role == Constants.ROLE_STUDENT ? "学生"
+                : role == Constants.ROLE_TEACHER ? "教师" : "访客";
+        return Result.ok(String.format("已批量更新 %d 名%s读者的权限参数", affected, roleName));
     }
 
     private boolean isBlank(String s) {

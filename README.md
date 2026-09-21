@@ -365,12 +365,13 @@ http://localhost:8080/library-ssm/
 ---
 
 
-# 1. 查谁占了 1099
+# 
 netstat -ano | findstr ":1099"
 
-# 2. 杀掉它（把 PID 换成查到的那个数字）
 taskkill /F /PID 20132
 
 ## 许可证
 
 仅供学习交流使用。
+
+emtibn6413@sandbox.com

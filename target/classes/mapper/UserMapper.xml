@@ -77,4 +77,20 @@
     <select id="countReaders" resultType="long">
         SELECT COUNT(*) FROM t_user WHERE role &gt; 0
     </select>
+
+    <update id="batchUpdatePermByRole">
+        UPDATE t_user
+        SET max_borrow_count = #{maxBorrowCount},
+            max_borrow_days  = #{maxBorrowDays},
+            max_renew_count  = #{maxRenewCount},
+            fine_per_day     = #{finePerDay}
+        WHERE role = #{role}
+    </update>
+
+    <select id="selectMaxStuNoByPrefix" resultType="string">
+        SELECT stu_or_job_no FROM t_user
+        WHERE stu_or_job_no LIKE CONCAT(#{prefix}, '%')
+        ORDER BY stu_or_job_no DESC
+        LIMIT 1
+    </select>
 </mapper>

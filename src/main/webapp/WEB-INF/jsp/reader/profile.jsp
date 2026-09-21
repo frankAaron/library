@@ -14,7 +14,7 @@
 <div class="container">
     <h2 class="page-title">个人中心</h2>
 
-    <div style="display:flex; gap:18px; align-items:flex-start;">
+    <div style="display:flex; gap:18px; align-items:stretch;">
         <%-- ==================== 个人资料修改 ==================== --%>
         <div class="card" style="flex:1;">
             <div class="card-title">个人资料</div>

@@ -8,6 +8,7 @@ import com.library.entity.User;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 借阅业务接口（借阅/归还/续借/预订 全流程闭环）
@@ -46,6 +47,15 @@ public interface BorrowService {
 
     /** 查询当前用户对某图书是否在借（未归还），返回借阅记录或null */
     BorrowRecord currentBorrowing(Long userId, Long bookId);
+
+    /** 查询当前用户对某图书是否已存在活跃预订 */
+    boolean currentReserving(Long userId, Long bookId);
+
+    /** 查询当前用户所有在借图书ID集合（用于列表页批量判断） */
+    Set<Long> myBorrowingBookIds(Long userId);
+
+    /** 查询当前用户所有活跃预订图书ID集合（用于列表页批量判断） */
+    Set<Long> myReservingBookIds(Long userId);
 
     /** 管理端：借阅记录分页查询 */
     Map<String, Object> pageAdmin(String keyword, Integer status, String startDate, String endDate,

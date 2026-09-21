@@ -76,13 +76,18 @@ public class PermissionService {
             user.setMaxBorrowDays(30);
         }
         if (user.getMaxRenewCount() == null) {
-            user.setMaxRenewCount(2);
+            user.setMaxRenewCount(1);
         }
     }
 
     /** 用户权限/押金变更后主动失效缓存 */
     public void evictUserCache(Long userId) {
         cacheService.evict(Constants.KEY_USER_PERM + userId);
+    }
+
+    /** 按角色批量失效用户权限缓存（管理员批量调整权限后调用） */
+    public void evictUserCacheByRole(Integer role) {
+        cacheService.evictPattern(Constants.KEY_USER_PERM + "*");
     }
 
     /** 获取身份对应的押金门槛 */

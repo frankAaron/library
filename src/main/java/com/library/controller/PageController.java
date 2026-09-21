@@ -8,6 +8,10 @@ import com.library.service.BorrowService;
 import com.library.service.CategoryService;
 import com.library.service.PermissionService;
 import com.library.service.StatsService;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -63,14 +67,24 @@ public class PageController {
                           @RequestParam(value = "publisher", required = false) String publisher,
                           @RequestParam(value = "author", required = false) String author,
                           @RequestParam(value = "pageNum", required = false) Integer pageNum,
-                          Model model) {
+                          HttpSession session, Model model) {
         model.addAttribute("categories", categoryService.listAll());
         model.addAttribute("pageData", bookService.page(keyword, categoryId, publisher, author, pageNum, 10));
-        // 回显筛选条件
         model.addAttribute("keyword", keyword);
         model.addAttribute("categoryId", categoryId);
         model.addAttribute("publisher", publisher);
         model.addAttribute("author", author);
+        User user = (User) session.getAttribute("loginUser");
+        if (user != null && user.getRole() != null && user.getRole() > 0) {
+            Set<Long> ids = borrowService.myBorrowingBookIds(user.getId());
+            Map<Long, Boolean> borrowMap = new HashMap<>();
+            for (Long id : ids) borrowMap.put(id, Boolean.TRUE);
+            model.addAttribute("myBorrowMap", borrowMap);
+            Set<Long> reserveIds = borrowService.myReservingBookIds(user.getId());
+            Map<Long, Boolean> reserveMap = new HashMap<>();
+            for (Long id : reserveIds) reserveMap.put(id, Boolean.TRUE);
+            model.addAttribute("myReserveMap", reserveMap);
+        }
         return "reader/books";
     }
 
@@ -87,6 +101,7 @@ public class PageController {
         if (user != null && user.getRole() != null && user.getRole() > 0) {
             borrowService.recordBrowse(user.getId(), id);
             model.addAttribute("myBorrow", borrowService.currentBorrowing(user.getId(), id));
+            model.addAttribute("myReserving", borrowService.currentReserving(user.getId(), id));
         }
         return "reader/bookDetail";
     }
@@ -159,5 +174,17 @@ public class PageController {
     @GetMapping("/admin/toFines")
     public String toFines() {
         return "admin/fines";
+    }
+
+    /** 读者消息中心 */
+    @GetMapping("/user/toNotifications")
+    public String toNotifications() {
+        return "reader/notifications";
+    }
+
+    /** 管理员押金退款审核 */
+    @GetMapping("/admin/toRefunds")
+    public String toRefunds() {
+        return "admin/refunds";
     }
 }

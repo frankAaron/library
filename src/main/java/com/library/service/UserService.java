@@ -30,4 +30,8 @@ public interface UserService {
 
     /** 管理端：启用/停用读者账号 */
     Result updateStatus(Long userId, Integer status);
+
+    /** 管理端：按角色批量调整权限参数 */
+    Result batchUpdatePermByRole(Integer role, Integer maxBorrowCount, Integer maxBorrowDays,
+                                 Integer maxRenewCount, java.math.BigDecimal finePerDay);
 }

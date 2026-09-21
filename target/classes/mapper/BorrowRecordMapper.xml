@@ -9,13 +9,20 @@
     </insert>
 
     <select id="selectById" resultType="BorrowRecord">
-        SELECT * FROM t_borrow_record WHERE id = #{id}
+        SELECT r.*, b.book_name
+        FROM t_borrow_record r LEFT JOIN t_book b ON r.book_id = b.id
+        WHERE r.id = #{id}
     </select>
 
     <select id="selectBorrowing" resultType="BorrowRecord">
         SELECT * FROM t_borrow_record
         WHERE user_id = #{userId} AND book_id = #{bookId} AND status IN (0, 2)
         LIMIT 1
+    </select>
+
+    <select id="selectBorrowingBookIds" resultType="long">
+        SELECT book_id FROM t_borrow_record
+        WHERE user_id = #{userId} AND status IN (0, 2)
     </select>
 
     <!-- 我的借阅列表 -->
@@ -133,5 +140,32 @@
         SELECT COUNT(*) FROM t_borrow_record
         WHERE status = 0
           AND due_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL #{days} DAY)
+    </select>
+
+    <select id="countDueSoonByUser" resultType="map">
+        SELECT user_id AS userId, COUNT(*) AS cnt
+        FROM t_borrow_record
+        WHERE status = 0
+          AND due_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL #{days} DAY)
+        GROUP BY user_id
+    </select>
+
+    <update id="freezeByOverdueDays">
+        UPDATE t_user
+        SET status = 1
+        WHERE id IN (
+            SELECT DISTINCT user_id FROM t_borrow_record
+            WHERE status = 2 AND DATEDIFF(NOW(), due_date) &gt;= #{days}
+        )
+        AND status = 0
+    </update>
+
+    <select id="listOverdueUserTotal" resultType="map">
+        SELECT user_id AS userId,
+               SUM(fine_per_day * DATEDIFF(NOW(), due_date)) AS overdueTotal
+        FROM t_borrow_record br
+        LEFT JOIN t_user u ON br.user_id = u.id
+        WHERE br.status = 2
+        GROUP BY user_id
     </select>
 </mapper>

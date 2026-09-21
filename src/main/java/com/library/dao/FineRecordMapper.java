@@ -39,4 +39,10 @@ public interface FineRecordMapper {
 
     /** 统计用户未缴罚款笔数（借阅校验使用） */
     long countUnpaidByUser(@Param("userId") Long userId);
+
+    /** 统计用户未缴罚款总额（冻结阈值判断） */
+    BigDecimal sumUnpaidByUser(@Param("userId") Long userId);
+
+    /** 管理员批量人工核销（按ID列表） */
+    int batchMarkPaid(@Param("ids") List<Long> ids, @Param("operatorId") Long operatorId);
 }
