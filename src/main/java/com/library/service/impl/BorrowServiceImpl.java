@@ -121,14 +121,13 @@ public class BorrowServiceImpl implements BorrowService {
                 && record.getStatus() != Constants.RECORD_OVERDUE) {
             return Result.fail("该图书已归还，请勿重复操作");
         }
-        User user = permissionService.getUserCached(sessionUser.getId());
         Date now = new Date();
         boolean overdue = record.getStatus() == Constants.RECORD_OVERDUE
                 || (record.getDueDate() != null && now.after(record.getDueDate()));
         BigDecimal fine = BigDecimal.ZERO;
         int overdueDays = 0;
-        // 1. 超期自动计费：罚款 = 超期天数(向上取整) × 身份日罚款标准
         if (overdue) {
+            User user = permissionService.getUserCached(sessionUser.getId());
             overdueDays = DateUtil.diffDaysCeil(now, record.getDueDate());
             fine = user.getFinePerDay().multiply(BigDecimal.valueOf(overdueDays))
                     .setScale(2, RoundingMode.HALF_UP);
@@ -138,36 +137,29 @@ public class BorrowServiceImpl implements BorrowService {
             fineRecord.setAmount(fine);
             fineRecordMapper.insert(fineRecord);
         }
-        // 2. 更新借阅记录（有罚款置为"超期归还"，否则"正常归还"）
         borrowRecordMapper.markReturned(record.getId(), now, fine);
-        // 3. 回补库存
         bookMapper.restoreStock(record.getBookId());
-        // 4. 如果有排队预订的第一位读者 → 自动分配（库存立即再扣 1，净效果不变）
         Reservation firstWaiting = reservationMapper.selectFirstWaitingWithBook(record.getBookId());
         String msg;
         if (firstWaiting != null) {
-            User nextUser = permissionService.getUserCached(firstWaiting.getUserId());
-            if (nextUser != null
-                    && nextUser.getStatus() == 0
-                    && borrowRecordMapper.countBorrowing(nextUser.getId()) < nextUser.getMaxBorrowCount()) {
-                // 给预订读者立即扣库存 + 创建借阅记录
-                if (bookMapper.deductStock(record.getBookId()) > 0) {
-                    Book autoBook = bookMapper.selectById(record.getBookId());
+            Book autoBook = bookMapper.selectById(record.getBookId());
+            if (autoBook != null && autoBook.getStock() != null && autoBook.getStock() > 0) {
+                User nextUser = permissionService.getUserCached(firstWaiting.getUserId());
+                Result borrowCheck = permissionService.checkBorrow(nextUser, autoBook);
+                if (borrowCheck.isSuccess() && bookMapper.deductStock(record.getBookId()) > 0) {
                     BorrowRecord autoRecord = new BorrowRecord();
                     autoRecord.setUserId(nextUser.getId());
                     autoRecord.setBookId(record.getBookId());
-                    autoRecord.setBookName(autoBook != null ? autoBook.getBookName() : null);
+                    autoRecord.setBookName(autoBook.getBookName());
                     autoRecord.setBorrowDate(now);
                     autoRecord.setDueDate(DateUtil.addDays(now, nextUser.getMaxBorrowDays()));
                     autoRecord.setStatus(Constants.RECORD_BORROWING);
                     autoRecord.setRenewCount(0);
                     autoRecord.setFineAmount(BigDecimal.ZERO);
                     borrowRecordMapper.insert(autoRecord);
-                    // 预订状态置为"已完成"
                     reservationMapper.finish(firstWaiting.getId());
                     bookMapper.incrBorrowCount(record.getBookId());
                     bookService.evictHot();
-                    // 给预订读者发站内消息 + 邮件
                     String bookTitle = firstWaiting.getBookName() == null ? "该图书" : "《" + firstWaiting.getBookName() + "》";
                     try {
                         notificationService.send(nextUser.getId(), Constants.NOTIFY_RESERVE_READY,
@@ -178,15 +170,11 @@ public class BorrowServiceImpl implements BorrowService {
                         log.warn("预订自动分配通知发送失败: {}", e.getMessage());
                     }
                 } else {
-                    // 理论上 restoreStock 后库存必 ≥1，这里保底
                     reservationMapper.notifyFirst(record.getBookId());
                 }
             } else {
-                // 预订读者账号有问题（停用/额度满/冻结），降级为仅通知
                 reservationMapper.notifyFirst(record.getBookId());
             }
-        } else {
-            firstWaiting = null;
         }
         if (overdue) {
             msg = "归还成功！该书已超期" + overdueDays + "天，产生罚款" + fine.stripTrailingZeros().toPlainString()
@@ -235,15 +223,18 @@ public class BorrowServiceImpl implements BorrowService {
     @Override
     @Transactional
     public Result reserve(User sessionUser, Long bookId) {
+        User user = permissionService.getUserCached(sessionUser.getId());
+        Result check = permissionService.checkReserve(user);
+        if (!check.isSuccess()) {
+            return check;
+        }
         Book book = bookMapper.selectById(bookId);
         if (book == null) {
             return Result.fail("图书不存在");
         }
-        // 有库存无需预订
         if (book.getStock() != null && book.getStock() > 0) {
             return Result.fail("该书有库存，可直接借阅");
         }
-        // 不可重复预订
         if (reservationMapper.existsActive(sessionUser.getId(), bookId) > 0) {
             return Result.fail("您已预订此书，请耐心等待到书通知");
         }

@@ -33,17 +33,21 @@ public class NotificationService {
         n.setTitle(title);
         n.setContent(content);
         notificationMapper.insert(n);
-        User u = userMapper.selectById(userId);
-        if (u != null && u.getEmail() != null && !u.getEmail().isEmpty()) {
-            qqMailService.sendHtml(u.getEmail(), "[智慧图书馆]" + title,
-                    "<div style=\"font-family:'Microsoft YaHei',sans-serif;max-width:560px;margin:20px auto;\">"
-                            + "<h2 style=\"color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:8px;\">"
-                            + title + "</h2>"
-                            + "<div style=\"color:#555;line-height:1.8;font-size:15px;padding:12px 0;\">"
-                            + content.replace("\n", "<br>")
-                            + "</div>"
-                            + "<p style=\"color:#999;font-size:12px;border-top:1px solid #eee;padding-top:10px;\">"
-                            + "此邮件由智慧图书馆系统自动发送，请勿直接回复。</p></div>");
+        try {
+            User u = userMapper.selectById(userId);
+            if (u != null && u.getEmail() != null && !u.getEmail().isEmpty()) {
+                qqMailService.sendHtml(u.getEmail(), "[智慧图书馆]" + title,
+                        "<div style=\"font-family:'Microsoft YaHei',sans-serif;max-width:560px;margin:20px auto;\">"
+                                + "<h2 style=\"color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:8px;\">"
+                                + title + "</h2>"
+                                + "<div style=\"color:#555;line-height:1.8;font-size:15px;padding:12px 0;\">"
+                                + content.replace("\n", "<br>")
+                                + "</div>"
+                                + "<p style=\"color:#999;font-size:12px;border-top:1px solid #eee;padding-top:10px;\">"
+                                + "此邮件由智慧图书馆系统自动发送，请勿直接回复。</p></div>");
+            }
+        } catch (Exception e) {
+            log.warn("[通知] 站内消息已发送，但邮件通知异常 userId={}: {}", userId, e.getMessage());
         }
     }
 

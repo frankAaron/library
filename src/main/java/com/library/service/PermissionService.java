@@ -141,6 +141,23 @@ public class PermissionService {
     }
 
     /**
+     * 预约前置校验
+     * 校验顺序：账号状态 → 未缴罚款
+     */
+    public Result checkReserve(User user) {
+        if (user == null) {
+            return Result.fail("用户信息不存在");
+        }
+        if (user.getStatus() != null && user.getStatus() != 0) {
+            return Result.fail("账号已被停用，请联系管理员");
+        }
+        if (fineRecordMapper.countUnpaidByUser(user.getId()) > 0) {
+            return Result.fail("您有未缴纳的超期罚款，请先在「我的借阅」中缴纳罚款后再预约");
+        }
+        return Result.ok();
+    }
+
+    /**
      * 续借前置校验
      * 校验顺序：记录状态 → 是否超期 → 身份是否支持续借 → 剩余续借次数
      */
