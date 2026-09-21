@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.dao.DepositRefundMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_deposit_refund (user_id, amount, status, reason, apply_time)
+        VALUES (#{userId}, #{amount}, 0, #{reason}, NOW())
+    </insert>
+
+    <select id="selectByUserId" resultType="DepositRefund">
+        SELECT * FROM t_deposit_refund WHERE user_id = #{userId} ORDER BY apply_time DESC
+    </select>
+
+    <select id="selectById" resultType="DepositRefund">
+        SELECT * FROM t_deposit_refund WHERE id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE t_deposit_refund
+        SET status = #{status},
+            admin_remark = #{adminRemark},
+            handle_time = NOW(),
+            handle_by = #{adminId}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectPageAdmin" resultType="DepositRefund">
+        <choose>
+            <when test="status != null">
+                SELECT r.*, u.username, u.real_name
+                FROM t_deposit_refund r LEFT JOIN t_user u ON r.user_id = u.id
+                WHERE r.status = #{status}
+                ORDER BY r.apply_time DESC
+                LIMIT #{offset}, #{pageSize}
+            </when>
+            <otherwise>
+                SELECT r.*, u.username, u.real_name
+                FROM t_deposit_refund r LEFT JOIN t_user u ON r.user_id = u.id
+                ORDER BY r.apply_time DESC
+                LIMIT #{offset}, #{pageSize}
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="countAdmin" resultType="long">
+        <choose>
+            <when test="status != null">
+                SELECT COUNT(*) FROM t_deposit_refund WHERE status = #{status}
+            </when>
+            <otherwise>
+                SELECT COUNT(*) FROM t_deposit_refund
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

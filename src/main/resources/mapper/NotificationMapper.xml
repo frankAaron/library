@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.dao.NotificationMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_notification (user_id, type, title, content, is_read, create_time)
+        VALUES (#{userId}, #{type}, #{title}, #{content}, 0, NOW())
+    </insert>
+
+    <select id="selectByUserId" resultType="Notification">
+        SELECT * FROM t_notification
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+        LIMIT 50
+    </select>
+
+    <select id="countUnread" resultType="long">
+        SELECT COUNT(*) FROM t_notification WHERE user_id = #{userId} AND is_read = 0
+    </select>
+
+    <update id="markRead">
+        UPDATE t_notification SET is_read = 1 WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <update id="markAllRead">
+        UPDATE t_notification SET is_read = 1 WHERE user_id = #{userId} AND is_read = 0
+    </update>
+
+    <select id="selectAll" resultType="Notification">
+        SELECT * FROM t_notification ORDER BY create_time DESC LIMIT 500
+    </select>
+
+</mapper>
