@@ -57,9 +57,9 @@
     var dot = document.getElementById('unreadDot');
     if(!dot) return;
     var ctx = '${pageContext.request.contextPath}';
-    function tick(){
+    window.refreshUnreadDot = function(){
         $.get(ctx + '/notify/list', function(r){
-            if(r.success){
+            if(r && r.success && r.data){
                 var n = r.data.unread || 0;
                 if(n > 0){
                     dot.textContent = n > 99 ? '99+' : n;
@@ -69,8 +69,11 @@
                 }
             }
         });
+    };
+    if(typeof $ !== 'undefined'){
+        window.refreshUnreadDot();
+        setInterval(window.refreshUnreadDot, 30000);
     }
-    if(typeof $ !== 'undefined'){ tick(); setInterval(tick, 30000); }
 })();
 </script>
 </c:if>

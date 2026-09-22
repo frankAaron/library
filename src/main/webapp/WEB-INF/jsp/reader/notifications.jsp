@@ -51,35 +51,51 @@
     var TYPE_ICON = {1:'📚',2:'⏰',3:'🚫',4:'💸',5:'💰',99:'📢'};
     var TYPE_NAME = {1:'预订到书',2:'即将到期',3:'账号冻结',4:'罚款生成',5:'押金退款',99:'系统通知'};
 
+    function refreshDot(){
+        if(typeof window.refreshUnreadDot === 'function'){ window.refreshUnreadDot(); }
+    }
+
     function loadList(){
         $.get(CTX + '/notify/list', function(r){
             if(!r.success){ $('#notifyList').html('<div class="empty-tip">加载失败</div>'); return; }
             var data = r.data;
             if(!data.list || data.list.length === 0){
                 $('#notifyList').html('<div class="empty-tip">🎉 暂无消息，一切安好</div>');
+                refreshDot();
                 return;
             }
             var html = '';
             data.list.forEach(function(n){
-                var cls = n.isRead === 0 ? 'unread' : '';
+                var unread = !n.read;
+                var cls = unread ? 'unread' : '';
                 var typeCls = 'type-' + n.type;
                 var icon = TYPE_ICON[n.type] || '📢';
                 var typeName = TYPE_NAME[n.type] || '通知';
-                html += '<div class="notify-item ' + cls + '">'
+                html += '<div class="notify-item ' + cls + '" data-id="' + n.id + '" style="cursor:pointer;" title="点击标记已读">'
                     + '<div class="notify-type ' + typeCls + '">' + icon + '</div>'
                     + '<div class="notify-body">'
-                    + '<div class="notify-title">' + (n.isRead === 0 ? '<span style="color:#3498db;">[未读]</span> ' : '') + n.title + '</div>'
+                    + '<div class="notify-title">' + (unread ? '<span style="color:#3498db;">[未读]</span> ' : '') + n.title + '</div>'
                     + '<div class="notify-content">' + n.content + '</div>'
                     + '<div class="notify-time">' + typeName + ' · ' + n.createTime + '</div>'
                     + '</div></div>';
             });
             $('#notifyList').html(html);
+            refreshDot();
         });
+    }
+    function markOne(id){
+        ajaxPost(CTX + '/notify/markRead', {id: id}, function(){ loadList(); });
     }
     function markAll(){
         ajaxPost(CTX + '/notify/markAllRead', {}, function(){ loadList(); });
     }
-    $(function(){ loadList(); });
+    $(function(){
+        loadList();
+        $(document).on('click', '.notify-item.unread', function(){
+            var id = $(this).data('id');
+            if(id) markOne(id);
+        });
+    });
 </script>
 </body>
 </html>
