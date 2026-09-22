@@ -56,16 +56,16 @@
 
             <c:choose>
                 <c:when test="${not empty myBorrow}">
-                    <button class="btn btn-disabled" disabled>✓ 已借阅（应还：${fn:substring(myBorrow.dueDate, 0, 10)}）</button>
+                    <button id="mainActionBtn" class="btn btn-danger" onclick="doReturn(${myBorrow.id})">归还（应还：<fmt:formatDate value="${myBorrow.dueDate}" pattern="yyyy-MM-dd"/>）</button>
                 </c:when>
                 <c:when test="${myReserving}">
-                    <button class="btn btn-disabled" disabled>✓ 已预订，请等待到书通知</button>
+                    <button id="mainActionBtn" class="btn btn-disabled" disabled>✓ 已预订，请等待到书通知</button>
                 </c:when>
                 <c:when test="${book.stock > 0}">
-                    <button class="btn btn-success" onclick="doBorrow(${book.id})">立即借阅</button>
+                    <button id="mainActionBtn" class="btn btn-success" onclick="doBorrow(${book.id})">立即借阅</button>
                 </c:when>
                 <c:otherwise>
-                    <button class="btn btn-warning" onclick="doReserve(${book.id})">预订到书通知</button>
+                    <button id="mainActionBtn" class="btn btn-warning" onclick="doReserve(${book.id})">预订到书通知</button>
                 </c:otherwise>
             </c:choose>
             <a class="btn btn-outline" href="${pageContext.request.contextPath}/book/toBooks">返回列表</a>
@@ -80,19 +80,28 @@
 <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="${pageContext.request.contextPath}/static/js/common.js"></script>
 <script>
-    /** 借阅 */
+    function getBtn(){ return document.getElementById('mainActionBtn'); }
+    function setLoading(msg){ var b=getBtn(); if(b){ b.disabled=true; b.textContent=msg; } }
+    function done(){ location.reload(); }
+
     function doBorrow(bookId) {
+        setLoading('借阅中...');
         ajaxPost('${pageContext.request.contextPath}/borrow/apply', {bookId: bookId}, function (r) {
-            alert(r.msg);
-            location.reload();
+            Toast.ok(r.msg); done();
         });
     }
-
-    /** 预订 */
+    function doReturn(recordId) {
+        Modal.confirm('归还图书', '确认归还此图书吗？', function () {
+            setLoading('归还中...');
+            ajaxPost('${pageContext.request.contextPath}/borrow/return', {recordId: recordId}, function (r) {
+                Toast.ok(r.msg); done();
+            });
+        });
+    }
     function doReserve(bookId) {
+        setLoading('预订中...');
         ajaxPost('${pageContext.request.contextPath}/borrow/reserve/apply', {bookId: bookId}, function (r) {
-            alert(r.msg);
-            location.reload();
+            Toast.ok(r.msg); done();
         });
     }
 </script>

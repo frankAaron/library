@@ -58,22 +58,25 @@
     if(!dot) return;
     var ctx = '${pageContext.request.contextPath}';
     window.refreshUnreadDot = function(){
-        $.get(ctx + '/notify/list', function(r){
-            if(r && r.success && r.data){
-                var n = r.data.unread || 0;
-                if(n > 0){
-                    dot.textContent = n > 99 ? '99+' : n;
-                    dot.style.display = 'flex';
-                } else {
-                    dot.style.display = 'none';
-                }
-            }
-        });
+        try {
+            fetch(ctx + '/notify/list', {credentials: 'same-origin'})
+                .then(function(res){ return res.json(); })
+                .then(function(r){
+                    if(r && r.success && r.data){
+                        var n = r.data.unread || 0;
+                        if(n > 0){
+                            dot.textContent = n > 99 ? '99+' : n;
+                            dot.style.display = 'flex';
+                        } else {
+                            dot.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(function(){});
+        } catch(e) {}
     };
-    if(typeof $ !== 'undefined'){
-        window.refreshUnreadDot();
-        setInterval(window.refreshUnreadDot, 30000);
-    }
+    window.refreshUnreadDot();
+    setInterval(window.refreshUnreadDot, 30000);
 })();
 </script>
 </c:if>

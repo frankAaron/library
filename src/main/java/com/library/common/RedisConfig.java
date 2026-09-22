@@ -40,8 +40,10 @@ public class RedisConfig {
         cfg.setMaxTotal(maxTotal);
         cfg.setMaxIdle(maxIdle);
         cfg.setMinIdle(minIdle);
-        cfg.setMaxWaitMillis(maxWaitMillis);
-        cfg.setTestOnBorrow(true);
+        cfg.setMaxWaitMillis(Math.min(maxWaitMillis, timeout));
+        cfg.setTestOnBorrow(false);
+        cfg.setTestOnReturn(false);
+        cfg.setTestWhileIdle(true);
         return cfg;
     }
 
