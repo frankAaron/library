@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
+import java.math.BigDecimal;
 
 /**
  * 管理端-罚款对账接口
@@ -53,5 +54,18 @@ public class AdminFineController {
         if (ids == null || ids.isEmpty()) return Result.fail("请选择要核销的罚款记录");
         int rows = fineRecordMapper.batchMarkPaid(ids, admin.getId());
         return Result.ok("已批量核销 " + rows + " 条罚款记录");
+    }
+
+    /**
+     * 撤销罚款核销（管理员误判回滚）—— 内部退款，不调支付宝沙箱退款 API
+     * 请求体: {"fineId": 1, "reason": "读者申诉，误判超期"}
+     */
+    @PostMapping("/revoke")
+    public Result revoke(@RequestBody Map<String, Object> param, HttpSession session) {
+        User admin = (User) session.getAttribute(UserController.SESSION_USER);
+        Long fineId = param.get("fineId") == null ? null : ((Number) param.get("fineId")).longValue();
+        String reason = (String) param.get("reason");
+        if (fineId == null) return Result.fail("罚款记录ID不能为空");
+        return accountService.adminRevokeFine(fineId, admin.getId(), reason);
     }
 }

@@ -79,4 +79,10 @@
         WHERE status = 0 AND id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
     </update>
+
+    <update id="unmarkPaid">
+        UPDATE t_fine_record
+        SET status = 0, pay_time = NULL, operator_id = NULL
+        WHERE id = #{id} AND status = 1
+    </update>
 </mapper>

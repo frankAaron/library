@@ -45,4 +45,7 @@ public interface FineRecordMapper {
 
     /** 管理员批量人工核销（按ID列表） */
     int batchMarkPaid(@Param("ids") List<Long> ids, @Param("operatorId") Long operatorId);
+
+    /** 管理员撤销罚款核销（误判回滚）—— status 从 1 改回 0，清空 pay_time/operator_id */
+    int unmarkPaid(@Param("id") Long id);
 }

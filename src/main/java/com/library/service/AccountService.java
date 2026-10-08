@@ -175,6 +175,51 @@ public class AccountService {
     }
 
     /**
+     * 管理员撤销罚款核销（误判回滚）—— 内部退款，不调支付宝沙箱退款 API
+     * 无论原罚款是押金余额扣的还是支付宝付的，统一处理：
+     * ① fine_record.status 从 1 改回 0  ② 恢复押金余额  ③ 写退还流水  ④ 通知用户
+     */
+    @Transactional
+    public Result adminRevokeFine(Long fineId, Long adminId, String reason) {
+        FineRecord fine = fineRecordMapper.selectById(fineId);
+        if (fine == null) return Result.fail("罚款记录不存在");
+        if (fine.getStatus() != Constants.FINE_PAID) return Result.fail("该罚款未缴纳，无需撤销");
+
+        if (fineRecordMapper.unmarkPaid(fineId) == 0) {
+            return Result.fail("撤销失败，罚款状态已变更");
+        }
+
+        int rows = userMapper.updateDeposit(fine.getUserId(), fine.getAmount());
+        if (rows == 0) {
+            throw new IllegalStateException("押金恢复失败：用户不存在或数据异常");
+        }
+
+        DepositRecord dr = new DepositRecord();
+        dr.setUserId(fine.getUserId());
+        dr.setAmount(fine.getAmount());
+        dr.setType(Constants.DEPOSIT_REFUND);
+        String bookLabel = fine.getBookName() == null ? "图书借阅" : "《" + fine.getBookName() + "》";
+        String revokeReason = (reason == null || reason.trim().isEmpty()) ? "管理员误判核销" : reason.trim();
+        String remarkText = "管理员撤销罚款恢复押金（原罚款ID:" + fineId + " 图书:" + bookLabel + " 原因:" + revokeReason + "）";
+        dr.setRemark(remarkText.length() > 180 ? remarkText.substring(0, 180) : remarkText);
+        depositRecordMapper.insert(dr);
+
+        permissionService.evictUserCache(fine.getUserId());
+
+        try {
+            String amountStr = fine.getAmount().stripTrailingZeros().toPlainString();
+            notificationService.send(fine.getUserId(), Constants.NOTIFY_FINE_REVOKED,
+                    "罚款已撤销，押金已恢复",
+                    "您的 " + bookLabel + " 超期罚款 " + amountStr + " 元已被管理员撤销，押金已恢复至 " + amountStr + " 元。"
+                            + "撤销原因：" + revokeReason + "。若您已通过支付宝缴纳该罚款，请忽略此消息（系统内部已完成退款登记）。");
+        } catch (Exception e) {
+            log.warn("[账户] 撤销罚款通知发送失败 fineId={}: {}", fineId, e.getMessage());
+        }
+
+        return Result.ok("已撤销罚款核销，" + fine.getAmount().stripTrailingZeros().toPlainString() + " 元押金已退还至用户账户");
+    }
+
+    /**
      * 缴清罚款后自动解冻：
      * 无未缴罚款 且 无超期≥15天未归还记录 且 账号当前处于冻结状态 时恢复为正常
      */

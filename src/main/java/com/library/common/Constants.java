@@ -56,6 +56,7 @@ public final class Constants {
     public static final int NOTIFY_FINE_GENERATED = 4;
     public static final int NOTIFY_REFUND_RESULT = 5;
     public static final int NOTIFY_UNFROZEN = 6;
+    public static final int NOTIFY_FINE_REVOKED = 7;
     public static final int NOTIFY_ADMIN_SYSTEM = 99;
 
     /* ==================== 押金退款申请状态 ==================== */
