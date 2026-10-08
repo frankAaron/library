@@ -107,7 +107,7 @@
                 + '<td class="ops">'
                 + (f.status === 0
                     ? '<button class="btn btn-primary btn-sm" onclick="markPaid(' + f.id + ')">标记已缴</button>'
-                    : '<span class="text-gray">-</span>')
+                    : '<button class="btn btn-outline btn-sm" style="color:#e74c3c;border-color:#e74c3c;" onclick="revokeFine(' + f.id + ', \'' + (f.amount || 0) + '\')">撤销</button>')
                 + '</td></tr>';
         });
         $('#fineTbody').html(html);
@@ -118,6 +118,20 @@
         if (!confirm('确认该笔罚款已线下收取并标记为已缴？')) return;
         ajaxPost(ctx + '/admin/fine/markPaid', {id: id}, function (r) {
             alert(r.msg);
+            loadPage(pageNum);
+        });
+    }
+
+    /** 撤销罚款核销（管理员误判回滚，内部退款） */
+    function revokeFine(fineId, amount) {
+        var reason = prompt('撤销罚款核销将触发内部退款（' + amount + ' 元押金返还读者），请输入撤销原因：', '读者申诉，误判');
+        if (!reason) return;
+        ajaxPost(ctx + '/admin/fine/revoke', {fineId: fineId, reason: reason}, function (r) {
+            if (r.code === 200) {
+                alert('撤销成功：' + r.msg);
+            } else {
+                alert('撤销失败：' + r.msg);
+            }
             loadPage(pageNum);
         });
     }

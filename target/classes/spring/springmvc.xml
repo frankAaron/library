@@ -11,7 +11,9 @@
            http://www.springframework.org/schema/mvc/spring-mvc.xsd">
 
     <!-- ==================== 控制层 + 拦截器 + 异常处理器扫描 ==================== -->
-    <context:component-scan base-package="com.library.controller,com.library.interceptor,com.library.exception"/>
+    <context:component-scan base-package="com.library.controller,com.library.interceptor,com.library.exception,com.library.config"/>
+
+    <context:property-placeholder location="classpath:upload.properties" ignore-unresolvable="true"/>
 
     <!-- ==================== 注解驱动（JSON 转换器自动注册 Jackson） ==================== -->
     <mvc:annotation-driven>
@@ -19,6 +21,11 @@
             <bean class="com.library.support.CurrentUserArgumentResolver"/>
         </mvc:argument-resolvers>
     </mvc:annotation-driven>
+
+    <!-- ==================== 静态资源映射 ==================== -->
+    <mvc:resources mapping="/static/**" location="/static/"/>
+    <mvc:resources mapping="/uploads/**" location="file:C:/Users/zhume/Desktop/code/library-uploads/"/>
+    <mvc:default-servlet-handler/>
 
     <!-- ==================== 三级权限拦截器 ==================== -->
     <mvc:interceptors>
@@ -62,9 +69,4 @@
 
     <!-- ==================== 文件上传解析器（Spring 6+ 使用 StandardServletMultipartResolver） ==================== -->
     <bean id="multipartResolver" class="org.springframework.web.multipart.support.StandardServletMultipartResolver"/>
-
-    <!-- ==================== 静态资源映射 ==================== -->
-    <mvc:resources mapping="/static/**" location="/static/"/>
-    <mvc:resources mapping="/uploads/**" location="/uploads/"/>
-    <mvc:default-servlet-handler/>
 </beans>

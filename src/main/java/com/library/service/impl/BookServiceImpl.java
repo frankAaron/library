@@ -9,14 +9,15 @@ import com.library.service.CacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,8 +56,49 @@ public class BookServiceImpl implements BookService {
     @Autowired
     private CacheService cacheService;
 
-    @Value("${upload.path:}")
-    private String uploadPath;
+    private File uploadDir;
+
+    private static String resolveUploadPath() {
+        String fromSys = System.getProperty("library.upload.path");
+        if (fromSys != null && !fromSys.trim().isEmpty()) {
+            return fromSys.trim();
+        }
+        try (InputStream is = BookServiceImpl.class.getClassLoader().getResourceAsStream("upload.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                String fromProps = props.getProperty("upload.path");
+                if (fromProps != null && !fromProps.trim().isEmpty()) {
+                    return fromProps.trim();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("读取 upload.properties 失败：{}", e.getMessage());
+        }
+        String catalinaBase = System.getProperty("catalina.base");
+        if (catalinaBase != null) {
+            File parent = new File(catalinaBase).getParentFile();
+            if (parent != null) {
+                return parent.getAbsolutePath() + File.separator + "library-uploads";
+            }
+        }
+        File parent = new File(System.getProperty("user.dir")).getParentFile();
+        return (parent != null ? parent.getAbsolutePath() : System.getProperty("user.dir")) + File.separator + "library-uploads";
+    }
+
+    @PostConstruct
+    public void initUploadDir() {
+        String path = resolveUploadPath();
+        log.info("[BookServiceImpl] 工作目录(user.dir)={}, Tomcat实例(catalina.base)={}",
+                System.getProperty("user.dir"), System.getProperty("catalina.base"));
+        log.info("[BookServiceImpl] 解析到的上传路径 = {}", path);
+        File dir = new File(path);
+        if (!dir.exists() && !dir.mkdirs()) {
+            log.warn("上传目录创建失败：{}，将在首次上传时重试", dir.getAbsolutePath());
+        }
+        this.uploadDir = dir;
+        log.info("[BookServiceImpl] 封面上传目录最终确定：{}", dir.getAbsolutePath());
+    }
 
     @Override
     public Map<String, Object> page(String keyword, Long categoryId, String publisher, String author,
@@ -166,20 +209,15 @@ public class BookServiceImpl implements BookService {
         if (!ALLOWED_SUFFIX.contains(suffix)) {
             throw new IllegalArgumentException("仅支持 jpg/jpeg/png/gif 格式图片");
         }
-        // 存储目录：优先使用配置的绝对路径，否则使用应用发布目录下的 /uploads
-        String dirPath;
-        if (uploadPath != null && !uploadPath.trim().isEmpty()) {
-            dirPath = uploadPath.trim();
-        } else {
-            dirPath = request.getServletContext().getRealPath("/uploads");
+        if (uploadDir == null) {
+            initUploadDir();
         }
-        File dir = new File(dirPath);
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new IllegalStateException("上传目录创建失败：" + dirPath);
+        if (!uploadDir.exists() && !uploadDir.mkdirs()) {
+            throw new IllegalStateException("上传目录创建失败：" + uploadDir.getAbsolutePath());
         }
         String fileName = UUID.randomUUID().toString().replace("-", "") + "." + suffix;
         try {
-            file.transferTo(new File(dir, fileName));
+            file.transferTo(new File(uploadDir, fileName));
         } catch (Exception e) {
             log.error("封面上传失败", e);
             throw new IllegalStateException("封面上传失败，请稍后重试");

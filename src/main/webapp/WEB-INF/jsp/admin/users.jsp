@@ -70,7 +70,7 @@
 
     <div class="card">
         <div class="text-gray" style="font-size:12px;margin-bottom:10px;">
-            说明：可直接修改各读者的借阅额度 / 借阅天数 / 可续借次数 / 罚款标准，点击「保存权限」立即生效（Redis 权限缓存同步失效）。
+            说明：可直接修改各读者的借阅额度 / 借阅天数 / 可续借次数 / 罚款标准，点击「保存权限」立即生效。
         </div>
         <table class="table">
             <thead>

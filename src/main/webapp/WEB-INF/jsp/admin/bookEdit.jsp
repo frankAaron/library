@@ -1,6 +1,7 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -52,8 +53,9 @@
         </div>
         <div class="form-row">
             <div class="form-item">
-                <label>可借库存 *</label>
-                <input type="number" id="stock" value="${book.stock == null ? 0 : book.stock}" min="0">
+                <label>可借库存 *${book == null || empty book.id ? '（自动=馆藏总数）' : ''}</label>
+                <input type="number" id="stock" value="${book.stock == null ? 0 : book.stock}" min="0"
+                       ${book == null || empty book.id ? 'readonly style="background:#f5f5f5;color:#999;"' : ''}>
             </div>
             <div class="form-item">
                 <label>馆藏总数 *</label>
@@ -88,6 +90,13 @@
     var ctx = '${pageContext.request.contextPath}';
     var bookId = ${book == null ? 'null' : book.id};
     var existCover = '${not empty book.coverUrl ? book.coverUrl : ""}';
+    var isNew = bookId == null;
+
+    if (isNew) {
+        $('#totalCount').on('input', function () {
+            $('#stock').val($(this).val());
+        });
+    }
 
     /** 封面选择即时预览 */
     $('#coverFile').on('change', function () {
@@ -109,7 +118,7 @@
             isbn: $.trim($('#isbn').val()),
             categoryId: parseInt($('#categoryId').val()) || null,
             price: $('#price').val() ? parseFloat($('#price').val()) : null,
-            stock: parseInt($('#stock').val()) || 0,
+            stock: isNew ? (parseInt($('#totalCount').val()) || 0) : (parseInt($('#stock').val()) || 0),
             totalCount: parseInt($('#totalCount').val()) || 0,
             location: $.trim($('#location').val()),
             description: $.trim($('#description').val()),
