@@ -30,7 +30,7 @@
 | 连接池 | Alibaba Druid | 1.2.20 |
 | 缓存 | Redis + Jedis + Commons Pool2 | 3.9.0 / 2.11.1 |
 | JSON | Jackson | 2.17.2 |
-| 文件上传 | Commons FileUpload + Commons IO | 1.4 / 2.11.0 |
+| 文件上传 | StandardServletMultipartResolver（Spring 6 内置，Tomcat 10+ 原生支持） | — |
 | 邮件 | Jakarta Mail (JavaMail) | 2.0.1 |
 | 支付 | 支付宝沙箱 SDK | 4.39.79.ALL |
 | 日志 | SLF4J + Reload4j + Log4j | 1.7.36 / 1.2.17 |
@@ -142,6 +142,8 @@ library/                                       ← Maven finalName = library
     │   ├── exception/            # 全局异常处理
     │   │   ├── BusinessException.java              # 业务异常
     │   │   └── GlobalExceptionHandler.java
+    │   ├── config/                # WebMvcConfigurer（upload 静态资源映射）
+    │   │   └── WebMvcConfig.java
     │   └── util/                 # 工具类
     │       ├── MD5Util.java                        # 密码加密
     │       ├── DateUtil.java
@@ -168,6 +170,7 @@ library/                                       ← Maven finalName = library
     │   ├── redis.properties                # Redis 连接配置
     │   ├── alipay.properties               # 支付宝沙箱 AppID / 密钥
     │   ├── mail.properties                 # QQ 邮箱 SMTP 配置
+    │   ├── upload.properties               # 封面上传目录配置（upload.path）
     │   ├── mybatis-config.xml
     │   └── log4j.properties
     └── webapp/
@@ -287,6 +290,17 @@ mail.password=QQ邮箱授权码   # 注意：不是QQ登录密码，是邮箱独
 mail.from=你的QQ号@qq.com
 ```
 
+**`src/main/resources/upload.properties`**（封面上传目录）
+
+```properties
+# 填项目目录的上一级，避免重新部署 WAR 时封面被清掉
+# 留空则自动回退到 Tomcat catalina.base 的上一级目录
+# ⚠️ 文件必须是无 BOM 的 UTF-8 编码（Windows PowerShell Set-Content 默认会加 BOM，需用 [System.Text.UTF8Encoding]::new($false)）
+upload.path=C:/Users/zhume/Desktop/code/library-uploads
+```
+
+> **目录说明**：Tomcat 启动后 `user.dir` 是 Tomcat 的 `bin/` 目录，父目录是 Tomcat 根目录，跟你的项目无关。所以必须显式配置路径。`BookServiceImpl` 启动时会自动创建该目录，静态资源映射通过 `springmvc.xml` 中 `<mvc:resources mapping="/uploads/**" location="file:${upload.path}/"/>` 生效。
+
 ### 步骤三：Maven 构建
 
 ```bash
@@ -376,10 +390,15 @@ http://localhost:8080/library/
 管理后台编辑图书 → 选择封面文件
   ├─ 前端即时预览（URL.createObjectURL）
   ├─ 提交时调用 /admin/book/uploadCover
-  │   → Commons FileUpload 接收 multipart
-  │   → 校验后缀（jpg/png/gif/webp）+ 大小（≤ 2MB）
-  │   → UUID 重命名 + 存入 /uploads/
-  └─ 返回相对路径后，随图书表单一起保存 coverUrl 字段
+  │   → StandardServletMultipartResolver 接收 multipart（Spring 6 内置）
+  │   → 校验后缀（jpg/jpeg/png/gif）+ 大小（≤ 2MB）
+  │   → UUID 重命名 + 存入 upload.properties 配置的目录（如未配置则自动回退）
+  │   → 目录不存在时首次启动自动创建
+  └─ 返回 /uploads/xxx.jpg 相对路径，随图书表单一起保存 coverUrl 字段
+
+upload.properties 配置示例：
+  upload.path=C:/Users/zhume/Desktop/code/library-uploads
+静态资源映射：springmvc.xml 中 <mvc:resources mapping="/uploads/**" location="file:${upload.path}/"/>
 ```
 
 ### 💰 押金退还流程（内部退款）
